@@ -1,28 +1,32 @@
 <?php
 // api/cart_action.php
+session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'add') {
     
-    $product_id = $_POST['product_id'];
+    $product_id = intval($_POST['product_id']);
     $name = $_POST['product_name'];
     $price = floatval($_POST['product_price']);
 
-    // কার্ট ইনিশিয়ালাইজ করা
+    // কার্ট না থাকলে তৈরি করো
     if (!isset($_SESSION['cart'])) {
         $_SESSION['cart'] = [];
     }
 
-    // কার্টে আইটেম যোগ করা (যদি আগে থেকে থাকে, তাহলে আপডেট না করে নতুন হিসেবে ধরছি সিম্পল রাখার জন্য)
-    // প্রফেশনাল কার্টে সাধারণত ডুপ্লিকেট চেক করা হয়, এখানে আমরা সরাসরি রিপ্লেস করছি "Buy Now" ফ্লো এর জন্য
-    $_SESSION['cart'] = [
+    // আইটেম অ্যারে তৈরি
+    $item = [
         'id' => $product_id,
         'name' => $name,
         'price' => $price,
-        'tax' => 0 // ফিউচার ট্যাক্স লজিকের জন্য
+        'qty' => 1
     ];
 
-    // চেকআউট পেজে রিডাইরেক্ট
-    header("Location: index.php?page=checkout");
+    // যদি প্রোডাক্ট অলরেডি থাকে, তাহলে কিছু করবেনা (অথবা কোয়ান্টিটি বাড়াতে পারেন)
+    // আমরা এখানে সহজ রাখার জন্য রিপ্লেস/আপডেট করছি
+    $_SESSION['cart'][$product_id] = $item;
+
+    // চেকআউট পেজে পাঠান
+    header("Location: ../index.php?page=checkout");
     exit;
 }
 ?>

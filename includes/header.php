@@ -17,7 +17,7 @@
                         bg: '#050505',
                         card: '#101010', 
                         border: '#1F1F1F',
-                        accent: '#F4B90B', /* Premium Gold/Yellow */
+                        accent: '#F4B90B',
                         'accent-hover': '#FFD700',
                         text: '#FFFFFF',
                         muted: '#9CA3AF'
@@ -70,9 +70,16 @@
             Hire Me
         </a>
 
-        <button class="md:hidden space-y-2 cursor-pointer group">
+        <button id="mobile-menu-btn" class="md:hidden space-y-2 cursor-pointer group z-50 relative">
             <div class="w-8 h-[2px] bg-white group-hover:bg-accent transition"></div>
             <div class="w-5 h-[2px] bg-white ml-auto group-hover:w-8 group-hover:bg-accent transition-all"></div>
         </button>
     </div>
 </nav>
+
+<div id="mobile-menu" class="fixed inset-0 bg-black/95 z-40 hidden flex flex-col items-center justify-center space-y-8 transition-all duration-300 opacity-0 translate-y-10 backdrop-blur-xl">
+    <a href="index.php?page=home" class="text-3xl font-display font-bold text-white hover:text-accent transition">HOME</a>
+    <a href="index.php?page=portfolio" class="text-3xl font-display font-bold text-white hover:text-accent transition">PORTFOLIO</a>
+    <a href="index.php?page=about" class="text-3xl font-display font-bold text-white hover:text-accent transition">ABOUT ME</a>
+    <a href="index.php?page=contact" class="text-3xl font-display font-bold text-white hover:text-accent transition">CONTACT</a>
+</div>
