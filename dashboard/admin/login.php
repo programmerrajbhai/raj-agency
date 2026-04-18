@@ -95,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="mt-8 text-center">
             <a href="../../index.php" class="text-xs text-gray-500 hover:text-white transition">← Back to Website</a>
         </div>
+        <div></div>
     </div>
 
 </body>
