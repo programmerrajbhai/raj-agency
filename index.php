@@ -3,7 +3,8 @@ session_start(); // কার্ট সেশনের জন্য জরুর
 
 require_once 'config/db.php'; 
 
-$page = isset($_GET['page']) ? $_GET['page'] : 'home';
+// ডিফল্ট পেজ 'feed' করে দেওয়া হলো, যাতে সাইটে ঢুকলেই নিউজফিড দেখা যায়
+$page = isset($_GET['page']) ? $_GET['page'] : 'feed';
 
 // কার্ট অ্যাকশন হ্যান্ডেল করা (Add to Cart)
 if ($page == 'cart_action') {
@@ -13,7 +14,8 @@ if ($page == 'cart_action') {
 
 include 'includes/header.php';
 
-$allowed_pages = ['home', 'services', 'portfolio', 'checkout', 'contact', 'about', 'service-details']; // 'service-details' অ্যাড করা হয়েছে
+// 'feed' পেজটি allowed_pages এর তালিকায় যুক্ত করা হয়েছে
+$allowed_pages = ['home', 'feed', 'services', 'portfolio', 'checkout', 'contact', 'about', 'service-details'];
 
 if (in_array($page, $allowed_pages)) {
     if (file_exists("pages/{$page}.php")) {
