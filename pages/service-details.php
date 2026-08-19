@@ -16,24 +16,38 @@ if (!$product) {
 }
 
 // ২. ডাটা প্রসেসিং (JSON Decode)
-// আমরা ধরে নিচ্ছি আপনি এডমিন প্যানেল থেকে এই ফরম্যাটে JSON সেভ করবেন:
-// {
-//    "top": ["Feature 1", "Feature 2"],
-//    "admin": ["Admin Feat 1", "Admin Feat 2"],
-//    "user": ["User Feat 1"],
-//    "tech": ["Laravel", "Flutter"],
-//    "files": ["Source Code", "Documentation"]
-// }
-// যদি সাধারণ লিস্ট থাকে, তাও সাপোর্ট করবে।
-
 $rawFeatures = json_decode($product['features'], true);
 $isStructured = isset($rawFeatures['top']) || isset($rawFeatures['admin']); 
 
 // ভেরিয়েবল সেটআপ
 $type = isset($product['file_type']) ? $product['file_type'] : 'web';
 $isApp = ($type == 'app');
-$demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
+
+// ৩. ডেমো লিংক কন্ট্রোলার (অ্যাডমিন প্যানেলের টগল লজিক)
+$demo_links = isset($rawFeatures['demo_links']) ? $rawFeatures['demo_links'] : [
+    'frontend' => ['url' => $product['demo_url'], 'show' => true],
+    'admin' => ['url' => '', 'show' => false],
+    'app' => ['url' => '', 'show' => false]
+];
+
+// ৪. মিডিয়া গ্যালারি ফেচিং
+$media_gallery = isset($rawFeatures['media_gallery']) ? $rawFeatures['media_gallery'] : [];
+if(empty($media_gallery) && !empty($product['thumbnail'])) {
+    $media_gallery[] = ['type' => 'image', 'url' => $product['thumbnail']];
+}
+
+// সাইডবার বাটনের লজিক
+$sidebarDemoUrl = '#';
+$sidebarDemoText = $isApp ? 'Download Test APK' : 'Live Preview';
+if ($isApp && !empty($demo_links['app']['show']) && !empty($demo_links['app']['url'])) {
+    $sidebarDemoUrl = $demo_links['app']['url'];
+} elseif (!empty($demo_links['frontend']['show']) && !empty($demo_links['frontend']['url'])) {
+    $sidebarDemoUrl = $demo_links['frontend']['url'];
+}
 ?>
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
 
 <main class="pt-32 pb-20 min-h-screen bg-[#030303] relative overflow-hidden selection:bg-accent selection:text-black" onmousemove="handleMouseMove(event)">
     
@@ -53,7 +67,10 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
             <h1 class="font-display text-3xl md:text-5xl font-bold text-white mb-4"><?php echo htmlspecialchars($product['title']); ?></h1>
             <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
                 <span class="bg-white/10 px-3 py-1 rounded text-white text-xs font-bold uppercase"><?php echo $isApp ? 'Mobile App' : 'Web Script'; ?></span>
-                <div class="flex items-center gap-1 text-yellow-400">★★★★★ <span class="text-muted ml-1">(4.9 Ratings)</span></div>
+                <div class="flex items-center gap-1 text-yellow-400">
+                    <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-half-fill"></i>
+                    <span class="text-muted ml-1">(4.9 Ratings)</span>
+                </div>
                 <span>• Updated: 20 Jan 2026</span>
             </div>
         </div>
@@ -63,24 +80,75 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
         
         <div class="lg:col-span-2 space-y-10">
             
-            <div class="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0a0a0a]">
-                <img src="<?php echo htmlspecialchars($product['thumbnail']); ?>" class="w-full h-auto" alt="Preview">
+            <!-- Dynamic Media Slider (Replaced Static Thumbnail) -->
+            <div class="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0a0a0a] relative group">
+                <div class="swiper detail-swiper w-full aspect-video">
+                    <div class="swiper-wrapper">
+                        <?php foreach($media_gallery as $media): ?>
+                            <div class="swiper-slide w-full h-full flex items-center justify-center bg-black">
+                                <?php if($media['type'] == 'youtube'): 
+                                    $regExp = '/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/';
+                                    preg_match($regExp, $media['url'], $match);
+                                    $ytId = (isset($match[2]) && strlen($match[2]) === 11) ? $match[2] : null;
+                                ?>
+                                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/<?php echo $ytId; ?>?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                <?php elseif($media['type'] == 'video'): ?>
+                                    <video src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-contain" controls preload="metadata"></video>
+                                <?php else: ?>
+                                    <img src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover">
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <!-- Slider Controls -->
+                    <?php if(count($media_gallery) > 1): ?>
+                        <div class="swiper-button-next !text-white drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity after:!text-2xl w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10 !right-4"></div>
+                        <div class="swiper-button-prev !text-white drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity after:!text-2xl w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10 !left-4"></div>
+                        <div class="swiper-pagination !bottom-4"></div>
+                    <?php endif; ?>
+                </div>
             </div>
 
+            <!-- Dynamic Demo Controls Grid -->
+            <?php if(!empty($demo_links['frontend']['show']) || !empty($demo_links['admin']['show']) || !empty($demo_links['app']['show'])): ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a href="<?php echo $demoUrl; ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-center transition-transform hover:scale-[1.02]">
+                
+                <!-- Frontend Demo Logic -->
+                <?php if(!empty($demo_links['frontend']['show'])): ?>
+                <a href="<?php echo htmlspecialchars($demo_links['frontend']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-900 p-6 text-center transition-transform hover:scale-[1.02] border border-blue-500/30">
                     <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
+                    <i class="ri-macbook-line text-3xl text-blue-300 mb-2 inline-block"></i>
                     <h3 class="text-xl font-bold text-white mb-1">Frontend Demo</h3>
                     <p class="text-blue-100 text-xs mb-3">View User Interface</p>
                     <span class="inline-block bg-white text-blue-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Click Here</span>
                 </a>
-                <a href="<?php echo $demoUrl; ?>/admin" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 p-6 text-center transition-transform hover:scale-[1.02]">
+                <?php endif; ?>
+
+                <!-- Admin Demo Logic -->
+                <?php if(!empty($demo_links['admin']['show'])): ?>
+                <a href="<?php echo htmlspecialchars($demo_links['admin']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-purple-900 p-6 text-center transition-transform hover:scale-[1.02] border border-purple-500/30">
                     <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
+                    <i class="ri-dashboard-3-line text-3xl text-purple-300 mb-2 inline-block"></i>
                     <h3 class="text-xl font-bold text-white mb-1">Admin Panel</h3>
                     <p class="text-purple-100 text-xs mb-3">View Backend Control</p>
                     <span class="inline-block bg-white text-purple-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Click Here</span>
                 </a>
+                <?php endif; ?>
+
+                <!-- App Demo Logic -->
+                <?php if(!empty($demo_links['app']['show'])): ?>
+                <a href="<?php echo htmlspecialchars($demo_links['app']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-600 to-green-900 p-6 text-center transition-transform hover:scale-[1.02] border border-green-500/30 <?php echo (!empty($demo_links['frontend']['show']) && !empty($demo_links['admin']['show'])) ? 'md:col-span-2' : ''; ?>">
+                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
+                    <i class="ri-smartphone-line text-3xl text-green-300 mb-2 inline-block"></i>
+                    <h3 class="text-xl font-bold text-white mb-1">Mobile App</h3>
+                    <p class="text-green-100 text-xs mb-3">Download & Install APK</p>
+                    <span class="inline-block bg-white text-green-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Download</span>
+                </a>
+                <?php endif; ?>
+
             </div>
+            <?php endif; ?>
 
             <div class="spotlight-card bg-white/[0.02] border border-white/5 rounded-2xl p-8 relative overflow-hidden">
                 <div class="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-300" style="background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);"></div>
@@ -190,8 +258,9 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
                             </button>
                         </form>
                         
-                        <a href="<?php echo $demoUrl; ?>" target="_blank" class="block w-full py-3 text-center border border-white/10 text-white font-bold rounded-xl hover:bg-white hover:text-black transition">
-                            <?php echo $isApp ? 'Download Test APK' : 'Live Preview'; ?>
+                        <!-- Dynamic Sidebar Demo Button -->
+                        <a href="<?php echo $sidebarDemoUrl; ?>" target="_blank" class="block w-full py-3 text-center border border-white/10 text-white font-bold rounded-xl hover:bg-white hover:text-black transition">
+                            <?php echo $sidebarDemoText; ?>
                         </a>
                     </div>
                 </div>
@@ -211,7 +280,27 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
         </div>
     </div>
 
+    <!-- Swiper JS & Spotlight Logic -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Initialize Slider
+            new Swiper('.detail-swiper', {
+                slidesPerView: 1,
+                spaceBetween: 0,
+                loop: true,
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+            });
+        });
+
+        // Mouse Spotlight Effect
         function handleMouseMove(e) {
             const cards = document.querySelectorAll(".spotlight-card");
             for (const card of cards) {
@@ -223,6 +312,7 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
             }
         }
         
+        // Magnetic Button Effect
         const btns = document.querySelectorAll(".magnetic-btn");
         btns.forEach((btn) => {
             btn.addEventListener("mousemove", (e) => {
@@ -236,4 +326,9 @@ $demoUrl = isset($product['demo_url']) ? $product['demo_url'] : '#';
             });
         });
     </script>
+    <style>
+        /* Slider dots color override */
+        .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.5); opacity: 1; }
+        .swiper-pagination-bullet-active { background: #F4B90B; transform: scale(1.2); }
+    </style>
 </main>

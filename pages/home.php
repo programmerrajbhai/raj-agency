@@ -168,10 +168,10 @@ if (!function_exists('getYouTubeIdFeed')) {
                                                 </div>
 
                                             <?php elseif($media['type'] == 'video'): ?>
-                                                <video src="<?php echo htmlspecialchars($media['url']); ?>" class="w-full h-full object-cover" controls playsinline></video>
+                                                <video src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover" controls playsinline preload="metadata"></video>
                                             
                                             <?php else: ?>
-                                                <img src="<?php echo htmlspecialchars($media['url']); ?>" class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition">
+                                                <img src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition">
                                             <?php endif; ?>
 
                                         </div>
@@ -247,7 +247,6 @@ if (!function_exists('getYouTubeIdFeed')) {
     </section>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"></script>
 <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
 
 <script>
@@ -255,9 +254,9 @@ if (!function_exists('getYouTubeIdFeed')) {
         var swipers = document.querySelectorAll('.post-swiper');
         
         swipers.forEach(function(swiperContainer) {
-            var counterBadge = swiperContainer.querySelector('.absolute.top-4'); // The 1 / X badge
+            var counterBadge = swiperContainer.querySelector('.absolute.top-4');
 
-            var swiperInstance = new Swiper(swiperContainer, {
+            new Swiper(swiperContainer, {
                 slidesPerView: 1,
                 spaceBetween: 0,
                 loop: false,
