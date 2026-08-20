@@ -17,64 +17,10 @@ if (!function_exists('getYouTubeIdFeed')) {
 
 <div class="relative w-full overflow-hidden selection:bg-accent selection:text-black font-sans bg-[#050505]">
     
-    <section class="min-h-screen w-full flex items-center justify-center relative pt-20 border-b border-white/5">
-        
-        <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(20,20,20,1)_0%,rgba(5,5,5,1)_100%)] z-0 pointer-events-none"></div>
-        <div class="absolute top-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[150px] z-0 animate-pulse pointer-events-none"></div>
+    <!-- Hero Section Include -->
+    <?php include 'includes/hero.php'; ?>
 
-        <div class="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-            
-            <div class="space-y-8">
-                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    <span class="text-xs font-bold tracking-widest uppercase text-muted">Available for New Projects</span>
-                </div>
-
-                <h1 class="font-display text-6xl md:text-8xl font-bold leading-[0.9] tracking-tight text-white">
-                    WE BUILD <br>
-                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-600 italic pr-2">ROYALTY</span> <br>
-                    PRODUCTS.
-                </h1>
-                
-                <p class="text-muted text-lg max-w-md leading-relaxed">
-                    Transforming complex ideas into premium digital assets. We specialize in high-end web & mobile solutions.
-                </p>
-
-                <div class="flex flex-wrap gap-4 pt-4">
-                    <a href="#newsfeed-section" class="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-accent transition-all duration-300 flex items-center gap-2 group">
-                        See Updates
-                        <svg class="w-4 h-4 group-hover:translate-y-1 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </a>
-                    <a href="index.php?page=about" class="px-8 py-4 border border-white/20 rounded-full text-white hover:border-accent hover:text-accent transition-colors duration-300">
-                        About Agency
-                    </a>
-                </div>
-            </div>
-
-            <div class="relative flex justify-center items-center h-[500px]">
-                <div class="relative w-64 h-64 md:w-96 md:h-96 animate-float">
-                    <div class="absolute inset-0 border border-white/10 rounded-full animate-spin-slow"></div>
-                    <div class="absolute inset-4 border border-white/5 rounded-full animate-spin-slow" style="animation-direction: reverse;"></div>
-                    
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="w-40 h-40 bg-gradient-to-br from-accent to-orange-600 rounded-3xl rotate-45 flex items-center justify-center shadow-[0_0_50px_rgba(244,185,11,0.3)]">
-                            <span class="text-6xl font-display font-black text-black -rotate-45">R.</span>
-                        </div>
-                    </div>
-
-                    <div class="absolute top-0 right-10 bg-card border border-white/10 p-3 rounded-xl shadow-xl animate-bounce" style="animation-duration: 3s;">
-                        <div class="w-8 h-1 bg-white/20 rounded mb-1"></div>
-                        <div class="w-5 h-1 bg-white/20 rounded"></div>
-                    </div>
-                    <div class="absolute bottom-10 left-0 bg-card border border-white/10 p-3 rounded-full shadow-xl animate-bounce" style="animation-duration: 4s;">
-                        <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </section>
-
+    <!-- Newsfeed Section -->
     <section id="newsfeed-section" class="py-20 bg-[#0a0a0a] min-h-screen relative z-10">
         <div class="max-w-[600px] mx-auto px-4">
             
@@ -103,6 +49,7 @@ if (!function_exists('getYouTubeIdFeed')) {
 
                 <article class="bg-[#111] rounded-2xl shadow-2xl border border-white/10 mb-10 overflow-hidden font-sans hover:border-white/20 transition-colors duration-300">
                     
+                    <!-- Header -->
                     <div class="p-4 flex items-center justify-between">
                         <div class="flex items-center gap-3 group">
                             <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black flex-shrink-0 shadow-[0_0_15px_rgba(244,185,11,0.2)] hover:scale-105 transition transform">
@@ -124,6 +71,7 @@ if (!function_exists('getYouTubeIdFeed')) {
                         </a>
                     </div>
 
+                    <!-- Description -->
                     <div class="px-5 pb-4">
                         <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="block hover:opacity-80 transition">
                             <h2 class="text-white font-bold text-[19px] mb-2 leading-tight"><?php echo htmlspecialchars($post['title']); ?></h2>
@@ -147,14 +95,13 @@ if (!function_exists('getYouTubeIdFeed')) {
                         <?php endif; ?>
                     </div>
 
+                    <!-- Media Slider -->
                     <?php if($mediaCount > 0): ?>
                         <div class="relative w-full bg-black group border-y border-white/5">
-                            
                             <div class="swiper post-swiper w-full h-[400px] md:h-[450px]">
                                 <div class="swiper-wrapper">
                                     <?php foreach($media_gallery as $index => $media): ?>
                                         <div class="swiper-slide w-full h-full flex items-center justify-center bg-[#050505]">
-                                            
                                             <?php if($media['type'] == 'youtube'): 
                                                 $ytId = getYouTubeIdFeed($media['url']);
                                             ?>
@@ -166,14 +113,11 @@ if (!function_exists('getYouTubeIdFeed')) {
                                                         </div>
                                                     </div>
                                                 </div>
-
                                             <?php elseif($media['type'] == 'video'): ?>
                                                 <video src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover" controls playsinline preload="metadata"></video>
-                                            
                                             <?php else: ?>
                                                 <img src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition">
                                             <?php endif; ?>
-
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -190,6 +134,7 @@ if (!function_exists('getYouTubeIdFeed')) {
                         </div>
                     <?php endif; ?>
 
+                    <!-- Actions & Price -->
                     <div class="p-4 bg-gradient-to-r from-white/5 to-transparent border-b border-white/5">
                         <div class="flex items-center justify-between">
                             <div>
@@ -212,6 +157,7 @@ if (!function_exists('getYouTubeIdFeed')) {
                         </div>
                     </div>
 
+                    <!-- Engagement (Like, Comment, Share) -->
                     <div class="px-2 py-3">
                         <div class="flex justify-between items-center text-gray-400 text-[13px] px-3 pb-3 mb-1 border-b border-white/5">
                             <div class="flex items-center gap-1.5 cursor-pointer hover:text-white transition">
