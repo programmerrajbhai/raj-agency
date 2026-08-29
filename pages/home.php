@@ -20,6 +20,11 @@ if (!function_exists('getYouTubeIdFeed')) {
     <!-- Hero Section Include -->
     <?php include 'includes/hero.php'; ?>
 
+
+    <!-- Skills Section Include -->
+    <?php include 'includes/skills.php'; ?>
+    
+
     <!-- Newsfeed Section -->
     <section id="newsfeed-section" class="py-20 bg-[#0a0a0a] min-h-screen relative z-10">
         <div class="max-w-[600px] mx-auto px-4">

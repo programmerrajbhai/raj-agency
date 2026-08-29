@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raj Agency | Premium Digital Assets</title>
-
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -56,7 +56,7 @@
         
         <a href="index.php?page=home" class="text-2xl font-display font-bold uppercase tracking-tighter flex items-center gap-2">
             <span class="w-3 h-3 bg-accent rounded-full"></span>
-            RAJ AGENCY
+            Habib Islam Raj
         </a>
 
         <ul class="hidden md:flex items-center gap-10 text-sm font-medium tracking-wide">
