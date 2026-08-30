@@ -1,334 +1,729 @@
 <?php
-// ১. ডাটাবেস কানেকশন ও ডাটা ফেচ
-if (!isset($_GET['id'])) {
-    echo "<script>window.location.href='index.php?page=portfolio';</script>";
-    exit;
-}
+declare(strict_types=1);
 
-$id = $_GET['id'];
-$stmt = $pdo->prepare("SELECT * FROM services WHERE id = ?");
-$stmt->execute([$id]);
-$product = $stmt->fetch();
+require_once __DIR__ . '/../includes/service_view.php';
+
+$serviceId = filter_input(
+    INPUT_GET,
+    'id',
+    FILTER_VALIDATE_INT
+);
+
+$product = false;
+
+if ($serviceId && $serviceId > 0) {
+    $statement = $pdo->prepare(
+        'SELECT *
+         FROM services
+         WHERE id = ?
+           AND is_active = 1
+         LIMIT 1'
+    );
+
+    $statement->execute([$serviceId]);
+
+    $product = $statement->fetch();
+}
 
 if (!$product) {
-    echo "<h1 class='text-white text-center mt-32'>Product Not Found</h1>";
-    exit;
+    http_response_code(404);
+    ?>
+
+    <main class="min-h-screen pt-40 px-5 text-center bg-[#050505]">
+
+        <i class="ri-error-warning-line text-7xl text-yellow-500"></i>
+
+        <h1 class="text-4xl font-bold mt-5">
+            Service Not Found
+        </h1>
+
+        <p class="text-gray-400 mt-3">
+            This service is unavailable or has been removed.
+        </p>
+
+        <a
+            href="index.php?page=portfolio"
+            class="inline-block mt-7 px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl"
+        >
+            Back to Portfolio
+        </a>
+
+    </main>
+
+    <?php
+    return;
 }
 
-// ২. ডাটা প্রসেসিং (JSON Decode)
-$rawFeatures = json_decode($product['features'], true);
-$isStructured = isset($rawFeatures['top']) || isset($rawFeatures['admin']); 
+$updateViews = $pdo->prepare(
+    'UPDATE services
+     SET views = views + 1
+     WHERE id = ?'
+);
 
-// ভেরিয়েবল সেটআপ
-$type = isset($product['file_type']) ? $product['file_type'] : 'web';
-$isApp = ($type == 'app');
+$updateViews->execute([
+    (int) $product['id'],
+]);
 
-// ৩. ডেমো লিংক কন্ট্রোলার (অ্যাডমিন প্যানেলের টগল লজিক)
-$demo_links = isset($rawFeatures['demo_links']) ? $rawFeatures['demo_links'] : [
-    'frontend' => ['url' => $product['demo_url'], 'show' => true],
-    'admin' => ['url' => '', 'show' => false],
-    'app' => ['url' => '', 'show' => false]
+$features = service_feature_data(
+    $product['features'] ?? ''
+);
+
+$media = service_media_items(
+    $features,
+    $product['thumbnail'] ?? ''
+);
+
+$demoItems = service_demo_items(
+    $features,
+    $product['demo_url'] ?? ''
+);
+
+$meta = service_type_meta(
+    $product['file_type'] ?? 'web'
+);
+
+$rawOverview = (string) (
+    !empty($product['full_desc'])
+        ? $product['full_desc']
+        : ($product['short_desc'] ?? '')
+);
+
+$rawOverview = preg_replace(
+    '/<[^>]+>/',
+    ' ',
+    $rawOverview
+) ?? $rawOverview;
+
+$overview = clean_text(
+    $rawOverview,
+    6000
+);
+
+$updatedAt = (string) (
+    $product['updated_at'] ??
+    $product['created_at'] ??
+    ''
+);
+
+$displayDate = '';
+
+if ($updatedAt !== '') {
+    $updatedTimestamp = strtotime($updatedAt);
+
+    if ($updatedTimestamp !== false) {
+        $displayDate = date(
+            'd M Y',
+            $updatedTimestamp
+        );
+    }
+}
+
+$featureGroups = [
+    'top' => [
+        'title' => 'Top Features',
+        'icon' => 'ri-fire-line',
+        'color' => 'text-yellow-500',
+    ],
+
+    'admin' => [
+        'title' => 'Admin Features',
+        'icon' => 'ri-shield-user-line',
+        'color' => 'text-purple-400',
+    ],
+
+    'user' => [
+        'title' => 'User Features',
+        'icon' => 'ri-user-star-line',
+        'color' => 'text-blue-400',
+    ],
 ];
 
-// ৪. মিডিয়া গ্যালারি ফেচিং
-$media_gallery = isset($rawFeatures['media_gallery']) ? $rawFeatures['media_gallery'] : [];
-if(empty($media_gallery) && !empty($product['thumbnail'])) {
-    $media_gallery[] = ['type' => 'image', 'url' => $product['thumbnail']];
-}
+$relatedStatement = $pdo->prepare(
+    'SELECT
+        id,
+        title,
+        price_basic,
+        thumbnail
+     FROM services
+     WHERE is_active = 1
+       AND file_type = ?
+       AND id <> ?
+     ORDER BY created_at DESC, id DESC
+     LIMIT 3'
+);
 
-// সাইডবার বাটনের লজিক
-$sidebarDemoUrl = '#';
-$sidebarDemoText = $isApp ? 'Download Test APK' : 'Live Preview';
-if ($isApp && !empty($demo_links['app']['show']) && !empty($demo_links['app']['url'])) {
-    $sidebarDemoUrl = $demo_links['app']['url'];
-} elseif (!empty($demo_links['frontend']['show']) && !empty($demo_links['frontend']['url'])) {
-    $sidebarDemoUrl = $demo_links['frontend']['url'];
-}
+$relatedStatement->execute([
+    $meta['key'],
+    (int) $product['id'],
+]);
+
+$relatedServices = $relatedStatement->fetchAll();
 ?>
 
-<!-- Swiper CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"
+>
 
-<main class="pt-32 pb-20 min-h-screen bg-[#030303] relative overflow-hidden selection:bg-accent selection:text-black" onmousemove="handleMouseMove(event)">
-    
-    <div class="fixed inset-0 z-0 pointer-events-none">
-        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px] animate-blob"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[120px] animate-blob animation-delay-2000"></div>
-        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
-    </div>
+<main class="pt-32 pb-24 min-h-screen bg-[#050505]">
 
-    <div class="relative z-10 border-b border-white/5 bg-black/40 backdrop-blur-md py-8">
-        <div class="max-w-7xl mx-auto px-6">
-            <div class="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-widest mb-4">
-                <a href="index.php" class="hover:text-white transition">Home</a> <span class="text-white/20">/</span> 
-                <a href="index.php?page=portfolio" class="hover:text-white transition">Store</a> <span class="text-white/20">/</span>
-                <span class="text-accent">Item Details</span>
-            </div>
-            <h1 class="font-display text-3xl md:text-5xl font-bold text-white mb-4"><?php echo htmlspecialchars($product['title']); ?></h1>
-            <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
-                <span class="bg-white/10 px-3 py-1 rounded text-white text-xs font-bold uppercase"><?php echo $isApp ? 'Mobile App' : 'Web Script'; ?></span>
-                <div class="flex items-center gap-1 text-yellow-400">
-                    <i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-fill"></i><i class="ri-star-half-fill"></i>
-                    <span class="text-muted ml-1">(4.9 Ratings)</span>
+    <section class="border-b border-white/5 bg-[#090909] py-10">
+
+        <div class="max-w-7xl mx-auto px-5">
+
+            <nav class="text-xs uppercase tracking-widest text-gray-500 mb-5">
+
+                <a
+                    href="index.php?page=home"
+                    class="hover:text-white"
+                >
+                    Home
+                </a>
+
+                <span class="mx-2">/</span>
+
+                <a
+                    href="index.php?page=portfolio"
+                    class="hover:text-white"
+                >
+                    Portfolio
+                </a>
+
+                <span class="mx-2">/</span>
+
+                <span class="text-yellow-500">
+                    Details
+                </span>
+
+            </nav>
+
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+
+                <div>
+
+                    <span class="inline-flex items-center gap-2 text-xs font-bold text-yellow-500 border border-yellow-500/20 bg-yellow-500/5 px-3 py-1.5 rounded-full">
+
+                        <i class="<?= e($meta['icon']) ?>"></i>
+
+                        <?= e($meta['label']) ?>
+
+                    </span>
+
+                    <h1 class="text-4xl md:text-6xl font-display font-bold mt-4">
+                        <?= e($product['title']) ?>
+                    </h1>
+
                 </div>
-                <span>• Updated: 20 Jan 2026</span>
+
+                <div class="text-sm text-gray-500 md:text-right">
+
+                    <?php if ($displayDate !== ''): ?>
+
+                        <span class="block">
+                            Updated: <?= e($displayDate) ?>
+                        </span>
+
+                    <?php endif; ?>
+
+                    <span class="block mt-1">
+
+                        <i class="ri-eye-line"></i>
+
+                        <?= number_format(
+                            (int) $product['views'] + 1
+                        ) ?>
+
+                        views
+
+                    </span>
+
+                </div>
+
             </div>
+
         </div>
-    </div>
 
-    <div class="max-w-7xl mx-auto px-6 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-10 relative z-10">
-        
-        <div class="lg:col-span-2 space-y-10">
-            
-            <!-- Dynamic Media Slider (Replaced Static Thumbnail) -->
-            <div class="rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-[#0a0a0a] relative group">
-                <div class="swiper detail-swiper w-full aspect-video">
-                    <div class="swiper-wrapper">
-                        <?php foreach($media_gallery as $media): ?>
-                            <div class="swiper-slide w-full h-full flex items-center justify-center bg-black">
-                                <?php if($media['type'] == 'youtube'): 
-                                    $regExp = '/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/';
-                                    preg_match($regExp, $media['url'], $match);
-                                    $ytId = (isset($match[2]) && strlen($match[2]) === 11) ? $match[2] : null;
-                                ?>
-                                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/<?php echo $ytId; ?>?rel=0" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                <?php elseif($media['type'] == 'video'): ?>
-                                    <video src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-contain" controls preload="metadata"></video>
-                                <?php else: ?>
-                                    <img src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover">
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
+    </section>
+
+    <section class="max-w-7xl mx-auto px-5 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-9">
+
+        <div class="lg:col-span-2 space-y-8">
+
+            <div class="rounded-3xl overflow-hidden border border-white/10 bg-[#111]">
+
+                <?php if ($media === []): ?>
+
+                    <div class="aspect-video flex flex-col items-center justify-center bg-gradient-to-br from-[#171717] to-black">
+
+                        <i class="<?= e($meta['icon']) ?> text-8xl text-yellow-500/40"></i>
+
+                        <span class="text-gray-500 mt-3">
+                            Preview is not available
+                        </span>
+
                     </div>
-                    
-                    <!-- Slider Controls -->
-                    <?php if(count($media_gallery) > 1): ?>
-                        <div class="swiper-button-next !text-white drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity after:!text-2xl w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10 !right-4"></div>
-                        <div class="swiper-button-prev !text-white drop-shadow-md opacity-0 group-hover:opacity-100 transition-opacity after:!text-2xl w-10 h-10 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10 !left-4"></div>
-                        <div class="swiper-pagination !bottom-4"></div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Dynamic Demo Controls Grid -->
-            <?php if(!empty($demo_links['frontend']['show']) || !empty($demo_links['admin']['show']) || !empty($demo_links['app']['show'])): ?>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <!-- Frontend Demo Logic -->
-                <?php if(!empty($demo_links['frontend']['show'])): ?>
-                <a href="<?php echo htmlspecialchars($demo_links['frontend']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-900 p-6 text-center transition-transform hover:scale-[1.02] border border-blue-500/30">
-                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
-                    <i class="ri-macbook-line text-3xl text-blue-300 mb-2 inline-block"></i>
-                    <h3 class="text-xl font-bold text-white mb-1">Frontend Demo</h3>
-                    <p class="text-blue-100 text-xs mb-3">View User Interface</p>
-                    <span class="inline-block bg-white text-blue-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Click Here</span>
-                </a>
-                <?php endif; ?>
-
-                <!-- Admin Demo Logic -->
-                <?php if(!empty($demo_links['admin']['show'])): ?>
-                <a href="<?php echo htmlspecialchars($demo_links['admin']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-600 to-purple-900 p-6 text-center transition-transform hover:scale-[1.02] border border-purple-500/30">
-                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
-                    <i class="ri-dashboard-3-line text-3xl text-purple-300 mb-2 inline-block"></i>
-                    <h3 class="text-xl font-bold text-white mb-1">Admin Panel</h3>
-                    <p class="text-purple-100 text-xs mb-3">View Backend Control</p>
-                    <span class="inline-block bg-white text-purple-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Click Here</span>
-                </a>
-                <?php endif; ?>
-
-                <!-- App Demo Logic -->
-                <?php if(!empty($demo_links['app']['show'])): ?>
-                <a href="<?php echo htmlspecialchars($demo_links['app']['url'] ?: '#'); ?>" target="_blank" class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-green-600 to-green-900 p-6 text-center transition-transform hover:scale-[1.02] border border-green-500/30 <?php echo (!empty($demo_links['frontend']['show']) && !empty($demo_links['admin']['show'])) ? 'md:col-span-2' : ''; ?>">
-                    <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-20 transition"></div>
-                    <i class="ri-smartphone-line text-3xl text-green-300 mb-2 inline-block"></i>
-                    <h3 class="text-xl font-bold text-white mb-1">Mobile App</h3>
-                    <p class="text-green-100 text-xs mb-3">Download & Install APK</p>
-                    <span class="inline-block bg-white text-green-900 text-xs font-bold px-4 py-2 rounded-lg shadow-lg">Download</span>
-                </a>
-                <?php endif; ?>
-
-            </div>
-            <?php endif; ?>
-
-            <div class="spotlight-card bg-white/[0.02] border border-white/5 rounded-2xl p-8 relative overflow-hidden">
-                <div class="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-300" style="background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255,255,255,0.06), transparent 40%);"></div>
-                
-                <div class="prose prose-invert max-w-none text-muted mb-10">
-                    <h3 class="text-white text-xl font-bold mb-4 border-l-4 border-accent pl-3">Overview</h3>
-                    <p><?php echo htmlspecialchars($product['short_desc']); ?></p>
-                </div>
-
-                <?php if ($isStructured): ?>
-                    
-                    <?php if(!empty($rawFeatures['top'])): ?>
-                    <div class="mb-10">
-                        <h3 class="text-white text-lg font-bold mb-4">🔥 Top Features</h3>
-                        <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <?php foreach($rawFeatures['top'] as $feat): ?>
-                                <li class="flex items-start gap-3 text-sm text-gray-300">
-                                    <svg class="w-5 h-5 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                    <?php echo $feat; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if(!empty($rawFeatures['admin'])): ?>
-                    <div class="mb-10">
-                        <h3 class="text-white text-lg font-bold mb-4">🛡️ Admin Features</h3>
-                        <ul class="space-y-2">
-                            <?php foreach($rawFeatures['admin'] as $feat): ?>
-                                <li class="flex items-center gap-3 text-sm text-gray-400">
-                                    <span class="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-                                    <?php echo $feat; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                    <?php endif; ?>
-
-                    <?php if(!empty($rawFeatures['tech'])): ?>
-                    <div class="mb-10">
-                        <h3 class="text-white text-lg font-bold mb-4">💻 Technology Used</h3>
-                        <div class="flex flex-wrap gap-2">
-                            <?php foreach($rawFeatures['tech'] as $tech): ?>
-                                <span class="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white uppercase tracking-wide">
-                                    <?php echo $tech; ?>
-                                </span>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                 <?php else: ?>
-                    <div class="mb-10">
-                        <h3 class="text-white text-lg font-bold mb-4">✨ Key Features</h3>
-                        <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <?php 
-                                if(is_array($rawFeatures)) {
-                                    foreach($rawFeatures as $feat) {
-                                        echo '<li class="flex items-center gap-3 text-sm text-gray-300"><svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> '.$feat.'</li>';
-                                    }
-                                }
-                            ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
 
-                <div class="bg-[#111] rounded-xl p-6 border border-white/5">
-                    <h4 class="text-white font-bold mb-4">📦 What You Will Get?</h4>
-                    <ul class="space-y-2 text-sm text-muted">
-                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Full Source Code</li>
-                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Project Documentation</li>
-                        <li class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Database SQL File</li>
-                    </ul>
-                </div>
+                    <div class="swiper service-gallery aspect-video">
 
-            </div>
-        </div>
+                        <div class="swiper-wrapper">
 
-        <div class="lg:col-span-1">
-            <div class="sticky top-28 space-y-6">
-                
-                <div class="spotlight-card relative bg-[#0F0F0F] border border-white/10 rounded-2xl p-6 overflow-hidden shadow-2xl group">
-                    <div class="pointer-events-none absolute -inset-px opacity-0 group-hover:opacity-100 transition duration-300" style="background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(244,185,11,0.1), transparent 40%);"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="flex justify-between items-center mb-6">
-                            <span class="text-sm text-muted font-bold">Regular License</span>
-                            <span class="text-3xl font-display font-bold text-white">$<?php echo number_format($product['price_basic'], 2); ?></span>
+                            <?php foreach ($media as $item): ?>
+
+                                <div class="swiper-slide bg-black flex items-center justify-center">
+
+                                    <?php if ($item['type'] === 'youtube'): ?>
+
+                                        <?php
+                                        $youtubeId = service_youtube_id(
+                                            $item['url']
+                                        );
+                                        ?>
+
+                                        <iframe
+                                            class="w-full h-full"
+                                            src="https://www.youtube-nocookie.com/embed/<?= e($youtubeId) ?>?rel=0"
+                                            title="<?= e($product['title']) ?>"
+                                            loading="lazy"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            referrerpolicy="strict-origin-when-cross-origin"
+                                            allowfullscreen
+                                        ></iframe>
+
+                                    <?php elseif ($item['type'] === 'video'): ?>
+
+                                        <video
+                                            src="<?= e($item['url']) ?>"
+                                            controls
+                                            playsinline
+                                            preload="metadata"
+                                            class="w-full h-full object-contain"
+                                        ></video>
+
+                                    <?php else: ?>
+
+                                        <img
+                                            src="<?= e($item['url']) ?>"
+                                            alt="<?= e($product['title']) ?>"
+                                            loading="lazy"
+                                            class="w-full h-full object-contain"
+                                        >
+
+                                    <?php endif; ?>
+
+                                </div>
+
+                            <?php endforeach; ?>
+
                         </div>
 
-                        <ul class="space-y-3 mb-6 text-sm text-gray-400">
-                            <li class="flex gap-2"><svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Quality Checked</li>
-                            <li class="flex gap-2"><svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Future Updates</li>
-                            <li class="flex gap-2"><svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 6 Months Support</li>
-                        </ul>
+                        <?php if (count($media) > 1): ?>
 
-                        <form action="index.php?page=cart_action" method="POST" class="mb-3">
-                            <input type="hidden" name="action" value="add">
-                            <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
-                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($product['title']); ?>">
-                            <input type="hidden" name="product_price" value="<?php echo $product['price_basic']; ?>">
-                            
-                            <button type="submit" class="magnetic-btn w-full py-4 bg-accent text-black font-bold uppercase tracking-widest rounded-xl hover:bg-[#FFD700] transition-all shadow-[0_0_20px_rgba(244,185,11,0.3)] flex justify-center items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                Add to Cart
-                            </button>
-                        </form>
-                        
-                        <!-- Dynamic Sidebar Demo Button -->
-                        <a href="<?php echo $sidebarDemoUrl; ?>" target="_blank" class="block w-full py-3 text-center border border-white/10 text-white font-bold rounded-xl hover:bg-white hover:text-black transition">
-                            <?php echo $sidebarDemoText; ?>
-                        </a>
+                            <div class="swiper-button-next !text-yellow-500"></div>
+
+                            <div class="swiper-button-prev !text-yellow-500"></div>
+
+                            <div class="swiper-pagination"></div>
+
+                        <?php endif; ?>
+
                     </div>
+
+                <?php endif; ?>
+
+            </div>
+
+            <?php if ($demoItems !== []): ?>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                    <?php foreach ($demoItems as $demo): ?>
+
+                        <a
+                            href="<?= e($demo['url']) ?>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="bg-[#111] border border-white/10 rounded-2xl p-5 hover:border-yellow-500/40 transition flex items-center gap-4"
+                        >
+
+                            <span class="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center text-2xl">
+
+                                <i class="<?= e($demo['icon']) ?>"></i>
+
+                            </span>
+
+                            <span>
+
+                                <strong class="block">
+                                    <?= e($demo['title']) ?>
+                                </strong>
+
+                                <small class="text-gray-500">
+
+                                    Open securely
+
+                                    <i class="ri-external-link-line"></i>
+
+                                </small>
+
+                            </span>
+
+                        </a>
+
+                    <?php endforeach; ?>
+
                 </div>
 
-                <div class="bg-white/[0.02] border border-white/5 rounded-2xl p-6">
-                    <table class="w-full text-sm text-left">
-                        <tbody class="divide-y divide-white/5">
-                            <tr><td class="py-3 text-muted">Released</td><td class="py-3 text-white text-right">20 Jan 2026</td></tr>
-                            <tr><td class="py-3 text-muted">Version</td><td class="py-3 text-white text-right">1.2.0</td></tr>
-                            <tr><td class="py-3 text-muted">Category</td><td class="py-3 text-white text-right uppercase"><?php echo $type; ?></td></tr>
-                            <tr><td class="py-3 text-muted">Compatible</td><td class="py-3 text-white text-right">Browsers, Android</td></tr>
-                        </tbody>
-                    </table>
+            <?php endif; ?>
+
+            <div class="bg-[#111] border border-white/10 rounded-3xl p-6 md:p-9">
+
+                <h2 class="text-2xl font-bold border-l-4 border-yellow-500 pl-4">
+                    Overview
+                </h2>
+
+                <p class="text-gray-400 leading-8 mt-5 whitespace-pre-line"><?= e(
+                    $overview !== ''
+                        ? $overview
+                        : 'Complete details will be provided after your inquiry.'
+                ) ?></p>
+
+            </div>
+
+            <?php foreach ($featureGroups as $key => $group): ?>
+
+                <?php if ($features[$key] !== []): ?>
+
+                    <div class="bg-[#111] border border-white/10 rounded-3xl p-6 md:p-9">
+
+                        <h2 class="text-2xl font-bold flex items-center gap-3">
+
+                            <i class="<?= e(
+                                $group['icon'] .
+                                ' ' .
+                                $group['color']
+                            ) ?>"></i>
+
+                            <?= e($group['title']) ?>
+
+                        </h2>
+
+                        <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+
+                            <?php foreach ($features[$key] as $feature): ?>
+
+                                <li class="flex items-start gap-3 text-gray-300">
+
+                                    <i class="ri-checkbox-circle-fill text-green-500 mt-0.5"></i>
+
+                                    <span>
+                                        <?= e(
+                                            clean_text(
+                                                $feature,
+                                                160
+                                            )
+                                        ) ?>
+                                    </span>
+
+                                </li>
+
+                            <?php endforeach; ?>
+
+                        </ul>
+
+                    </div>
+
+                <?php endif; ?>
+
+            <?php endforeach; ?>
+
+            <?php if ($features['tech'] !== []): ?>
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-6 md:p-9">
+
+                    <h2 class="text-2xl font-bold">
+                        Technology Used
+                    </h2>
+
+                    <div class="flex flex-wrap gap-3 mt-6">
+
+                        <?php foreach ($features['tech'] as $tech): ?>
+
+                            <span class="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm font-bold">
+                                <?= e(
+                                    clean_text(
+                                        $tech,
+                                        120
+                                    )
+                                ) ?>
+                            </span>
+
+                        <?php endforeach; ?>
+
+                    </div>
+
+                </div>
+
+            <?php endif; ?>
+
+            <?php if ($features['files'] !== []): ?>
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-6 md:p-9">
+
+                    <h2 class="text-2xl font-bold">
+                        What You Will Get
+                    </h2>
+
+                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+
+                        <?php foreach ($features['files'] as $file): ?>
+
+                            <li class="flex gap-3 text-gray-300">
+
+                                <i class="ri-file-check-fill text-yellow-500"></i>
+
+                                <?= e(
+                                    clean_text(
+                                        $file,
+                                        160
+                                    )
+                                ) ?>
+
+                            </li>
+
+                        <?php endforeach; ?>
+
+                    </ul>
+
+                </div>
+
+            <?php endif; ?>
+
+        </div>
+
+        <aside class="lg:col-span-1">
+
+            <div class="sticky top-28 space-y-6">
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-7 shadow-2xl">
+
+                    <span class="text-sm text-gray-500">
+                        Regular License
+                    </span>
+
+                    <div class="text-5xl font-display font-bold mt-2 mb-7">
+                        $<?= number_format(
+                            (float) $product['price_basic'],
+                            2
+                        ) ?>
+                    </div>
+
+                    <ul class="space-y-3 text-sm text-gray-400 mb-7">
+
+                        <li>
+                            <i class="ri-check-line text-green-500 mr-2"></i>
+                            Quality checked service
+                        </li>
+
+                        <li>
+                            <i class="ri-check-line text-green-500 mr-2"></i>
+                            Secure order request
+                        </li>
+
+                        <li>
+                            <i class="ri-check-line text-green-500 mr-2"></i>
+                            Support discussion included
+                        </li>
+
+                    </ul>
+
+                    <form
+                        action="api/cart_action.php"
+                        method="POST"
+                    >
+                        <?= csrf_field() ?>
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="add"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="product_id"
+                            value="<?= (int) $product['id'] ?>"
+                        >
+
+                        <button
+                            type="submit"
+                            class="w-full py-4 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition"
+                        >
+                            <i class="ri-shopping-cart-2-line mr-1"></i>
+                            Add to Cart
+                        </button>
+
+                    </form>
+
+                    <a
+                        href="index.php?page=contact"
+                        class="block w-full py-3.5 border border-white/10 text-center font-bold rounded-xl hover:bg-white/5 mt-3"
+                    >
+                        Ask Before Ordering
+                    </a>
+
+                </div>
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-6">
+
+                    <dl class="divide-y divide-white/5 text-sm">
+
+                        <div class="flex justify-between py-3">
+                            <dt class="text-gray-500">
+                                Category
+                            </dt>
+
+                            <dd>
+                                <?= e($meta['label']) ?>
+                            </dd>
+                        </div>
+
+                        <div class="flex justify-between py-3">
+                            <dt class="text-gray-500">
+                                Delivery
+                            </dt>
+
+                            <dd>
+                                After discussion
+                            </dd>
+                        </div>
+
+                        <div class="flex justify-between py-3">
+                            <dt class="text-gray-500">
+                                Status
+                            </dt>
+
+                            <dd class="text-green-400">
+                                Available
+                            </dd>
+                        </div>
+
+                    </dl>
+
                 </div>
 
             </div>
-        </div>
-    </div>
 
-    <!-- Swiper JS & Spotlight Logic -->
-    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Initialize Slider
-            new Swiper('.detail-swiper', {
-                slidesPerView: 1,
-                spaceBetween: 0,
-                loop: true,
-                navigation: {
-                    nextEl: '.swiper-button-next',
-                    prevEl: '.swiper-button-prev',
-                },
-                pagination: {
-                    el: '.swiper-pagination',
-                    clickable: true,
-                },
-            });
-        });
+        </aside>
 
-        // Mouse Spotlight Effect
-        function handleMouseMove(e) {
-            const cards = document.querySelectorAll(".spotlight-card");
-            for (const card of cards) {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.setProperty("--mouse-x", `${x}px`);
-                card.style.setProperty("--mouse-y", `${y}px`);
-            }
-        }
-        
-        // Magnetic Button Effect
-        const btns = document.querySelectorAll(".magnetic-btn");
-        btns.forEach((btn) => {
-            btn.addEventListener("mousemove", (e) => {
-                const rect = btn.getBoundingClientRect();
-                const x = e.clientX - rect.left - rect.width / 2;
-                const y = e.clientY - rect.top - rect.height / 2;
-                btn.style.transform = `translate(${x * 0.1}px, ${y * 0.1}px)`;
-            });
-            btn.addEventListener("mouseleave", () => {
-                btn.style.transform = "translate(0, 0)";
-            });
-        });
-    </script>
-    <style>
-        /* Slider dots color override */
-        .swiper-pagination-bullet { background: rgba(255, 255, 255, 0.5); opacity: 1; }
-        .swiper-pagination-bullet-active { background: #F4B90B; transform: scale(1.2); }
-    </style>
+    </section>
+
+    <?php if ($relatedServices !== []): ?>
+
+        <section class="max-w-7xl mx-auto px-5 mt-20">
+
+            <div class="flex items-end justify-between gap-4 mb-7">
+
+                <h2 class="text-3xl font-bold">
+                    Related Services
+                </h2>
+
+                <a
+                    href="index.php?page=portfolio"
+                    class="text-yellow-500 hover:underline"
+                >
+                    View all
+                </a>
+
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <?php foreach ($relatedServices as $related): ?>
+
+                    <?php
+                    $relatedImage = service_media_url(
+                        $related['thumbnail'] ?? ''
+                    );
+                    ?>
+
+                    <a
+                        href="index.php?page=service-details&id=<?= (int) $related['id'] ?>"
+                        class="bg-[#111] border border-white/10 rounded-2xl overflow-hidden hover:border-yellow-500/40 transition group"
+                    >
+
+                        <div class="h-44 bg-black">
+
+                            <?php if ($relatedImage !== ''): ?>
+
+                                <img
+                                    src="<?= e($relatedImage) ?>"
+                                    alt="<?= e($related['title']) ?>"
+                                    loading="lazy"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition"
+                                >
+
+                            <?php else: ?>
+
+                                <div class="w-full h-full flex items-center justify-center">
+
+                                    <i class="ri-code-box-line text-5xl text-yellow-500/30"></i>
+
+                                </div>
+
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="p-5 flex justify-between gap-3">
+
+                            <strong>
+                                <?= e($related['title']) ?>
+                            </strong>
+
+                            <span>
+                                $<?= number_format(
+                                    (float) $related['price_basic'],
+                                    2
+                                ) ?>
+                            </span>
+
+                        </div>
+
+                    </a>
+
+                <?php endforeach; ?>
+
+            </div>
+
+        </section>
+
+    <?php endif; ?>
+
 </main>
+
+<?php if (count($media) > 1): ?>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new Swiper('.service-gallery', {
+            slidesPerView: 1,
+            loop: false,
+
+            navigation: {
+                nextEl: '.swiper-button-next',
+                prevEl: '.swiper-button-prev'
+            },
+
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true
+            }
+        });
+    });
+    </script>
+
+<?php endif; ?>

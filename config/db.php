@@ -1,16 +1,77 @@
 <?php
-// config/db.php
+declare(strict_types=1);
 
-$host = 'localhost';
-$dbname = 'raj_agency_db';
-$user = 'root'; // Change if needed
-$pass = '';     // Change if needed
+require_once __DIR__ . '/app.php';
+
+$host = (string) env_value(
+    'DB_HOST',
+    'localhost'
+);
+
+$port = (string) env_value(
+    'DB_PORT',
+    '3306'
+);
+
+$database = (string) env_value(
+    'DB_NAME',
+    'raj_agency_db'
+);
+
+$username = (string) env_value(
+    'DB_USER',
+    'root'
+);
+
+$password = (string) env_value(
+    'DB_PASS',
+    ''
+);
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Database Connection Failed: " . $e->getMessage());
+    $dsn =
+        "mysql:host={$host};"
+        . "port={$port};"
+        . "dbname={$database};"
+        . "charset=utf8mb4";
+
+    $pdo = new PDO(
+        $dsn,
+        $username,
+        $password,
+        [
+            PDO::ATTR_ERRMODE =>
+                PDO::ERRMODE_EXCEPTION,
+
+            PDO::ATTR_DEFAULT_FETCH_MODE =>
+                PDO::FETCH_ASSOC,
+
+            PDO::ATTR_EMULATE_PREPARES =>
+                false,
+
+            PDO::ATTR_STRINGIFY_FETCHES =>
+                false,
+        ]
+    );
+} catch (PDOException $exception) {
+    error_log(
+        'Database connection failed: '
+        . $exception->getMessage()
+    );
+
+    http_response_code(500);
+
+    if (APP_DEBUG) {
+        exit(
+            'Database connection failed: '
+            . e(
+                $exception->getMessage()
+            )
+        );
+    }
+
+    exit(
+        'The website is temporarily unavailable. '
+        . 'Please try again later.'
+    );
 }
-?>

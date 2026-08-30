@@ -1,264 +1,255 @@
 <?php
-// Database theke sob service/product ana
-$stmt = $pdo->query("SELECT * FROM services ORDER BY id DESC");
-$posts = $stmt->fetchAll();
+declare(strict_types=1);
 
-// YouTube video ID ber korar function
-if (!function_exists('getYouTubeIdFeed')) {
-    function getYouTubeIdFeed($url) {
-        $regExp = '/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/';
-        preg_match($regExp, $url, $match);
-        return (isset($match[2]) && strlen($match[2]) === 11) ? $match[2] : null;
-    }
-}
+require_once __DIR__ . '/../includes/service_view.php';
+
+$statement = $pdo->query(
+    'SELECT
+        id,
+        title,
+        short_desc,
+        price_basic,
+        features,
+        thumbnail,
+        file_type
+     FROM services
+     WHERE is_active = 1
+     ORDER BY created_at DESC, id DESC
+     LIMIT 6'
+);
+
+$latestServices = $statement->fetchAll();
 ?>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+<div class="relative w-full overflow-hidden bg-[#050505]">
 
-<div class="relative w-full overflow-hidden selection:bg-accent selection:text-black font-sans bg-[#050505]">
-    
-    <!-- Hero Section Include -->
-    <?php include 'includes/hero.php'; ?>
+    <?php require __DIR__ . '/../includes/hero.php'; ?>
 
+    <?php require __DIR__ . '/../includes/skills.php'; ?>
 
-    <!-- Skills Section Include -->
-    <?php include 'includes/skills.php'; ?>
-    
+    <section class="py-24 bg-[#080808] border-y border-white/5">
 
-    <!-- Newsfeed Section -->
-    <section id="newsfeed-section" class="py-20 bg-[#0a0a0a] min-h-screen relative z-10">
-        <div class="max-w-[600px] mx-auto px-4">
-            
-            <div class="text-center mb-12">
-                <h2 class="text-3xl font-display font-bold text-white flex items-center justify-center gap-3">
-                    <i class="ri-flashlight-fill text-accent"></i> Latest Updates
-                </h2>
-                <p class="text-gray-400 text-sm mt-2">Explore our newest scripts, apps, and features.</p>
+        <div class="max-w-7xl mx-auto px-5">
+
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-12">
+
+                <div>
+                    <span class="text-yellow-500 text-sm font-bold uppercase tracking-[.25em]">
+                        Latest Work
+                    </span>
+
+                    <h2 class="text-4xl md:text-6xl font-display font-bold mt-3">
+                        Services & Products
+                    </h2>
+
+                    <p class="text-gray-400 mt-4 max-w-2xl">
+                        Ready-made digital products and custom
+                        development services for your business.
+                    </p>
+                </div>
+
+                <a
+                    href="index.php?page=portfolio"
+                    class="inline-flex items-center gap-2 text-yellow-500 font-bold hover:text-yellow-400"
+                >
+                    View all services
+                    <i class="ri-arrow-right-line"></i>
+                </a>
+
             </div>
 
-            <?php foreach($posts as $post): ?>
-                <?php 
-                    $features = json_decode($post['features'], true);
-                    $media_gallery = isset($features['media_gallery']) ? $features['media_gallery'] : [];
-                    
-                    if(empty($media_gallery) && !empty($post['thumbnail'])) {
-                        $media_gallery[] = ['type' => 'image', 'url' => $post['thumbnail']];
-                    }
-                    $mediaCount = count($media_gallery);
+            <?php if ($latestServices === []): ?>
 
-                    // Shorten description for "See more" functionality
-                    $fullDesc = htmlspecialchars($post['short_desc']);
-                    $shortDesc = strlen($fullDesc) > 160 ? substr($fullDesc, 0, 160) . '...' : $fullDesc;
-                    $hasMore = strlen($fullDesc) > 160;
-                ?>
+                <div class="rounded-3xl border border-white/10 bg-[#111] p-12 text-center">
 
-                <article class="bg-[#111] rounded-2xl shadow-2xl border border-white/10 mb-10 overflow-hidden font-sans hover:border-white/20 transition-colors duration-300">
-                    
-                    <!-- Header -->
-                    <div class="p-4 flex items-center justify-between">
-                        <div class="flex items-center gap-3 group">
-                            <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-black font-black flex-shrink-0 shadow-[0_0_15px_rgba(244,185,11,0.2)] hover:scale-105 transition transform">
-                                R
-                            </a>
-                            <div>
-                                <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="text-white font-bold text-[16px] hover:text-accent transition-colors flex items-center gap-1">
-                                    Raj Agency <i class="ri-verified-badge-fill text-blue-500 text-[14px]"></i>
-                                </a>
-                                <div class="flex items-center gap-1.5 text-[12px] text-gray-400 mt-0.5">
-                                    <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="font-medium tracking-wide hover:underline">Sponsored</a>
-                                    <span>•</span>
-                                    <i class="ri-earth-fill"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="text-gray-400 hover:text-white hover:bg-white/10 w-10 h-10 rounded-full transition flex items-center justify-center" title="View Full Post">
-                            <i class="ri-external-link-line text-xl"></i>
-                        </a>
-                    </div>
+                    <i class="ri-folder-open-line text-5xl text-yellow-500"></i>
 
-                    <!-- Description -->
-                    <div class="px-5 pb-4">
-                        <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="block hover:opacity-80 transition">
-                            <h2 class="text-white font-bold text-[19px] mb-2 leading-tight"><?php echo htmlspecialchars($post['title']); ?></h2>
-                        </a>
+                    <h3 class="text-2xl font-bold mt-4">
+                        New services are coming soon.
+                    </h3>
 
-                        <p class="text-gray-300 text-[15px] mb-3 whitespace-pre-wrap leading-relaxed opacity-90">
-                            <?php echo $shortDesc; ?>
-                            <?php if($hasMore): ?>
-                                <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="text-gray-400 font-bold hover:text-white hover:underline ml-1">See more</a>
-                            <?php endif; ?>
-                        </p>
-                        
-                        <?php if(!empty($features['tech'])): ?>
-                            <div class="flex flex-wrap gap-2 mb-2 mt-2">
-                                <?php foreach($features['tech'] as $tech): ?>
-                                    <span class="px-2.5 py-1 bg-blue-500/10 text-blue-400 text-[12px] font-bold rounded-md uppercase tracking-wider hover:bg-blue-500/20 cursor-pointer transition">
-                                        <?php echo htmlspecialchars($tech); ?>
-                                    </span>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                    <a
+                        href="index.php?page=contact"
+                        class="inline-block mt-5 text-yellow-500 hover:underline"
+                    >
+                        Discuss a custom project
+                    </a>
 
-                    <!-- Media Slider -->
-                    <?php if($mediaCount > 0): ?>
-                        <div class="relative w-full bg-black group border-y border-white/5">
-                            <div class="swiper post-swiper w-full h-[400px] md:h-[450px]">
-                                <div class="swiper-wrapper">
-                                    <?php foreach($media_gallery as $index => $media): ?>
-                                        <div class="swiper-slide w-full h-full flex items-center justify-center bg-[#050505]">
-                                            <?php if($media['type'] == 'youtube'): 
-                                                $ytId = getYouTubeIdFeed($media['url']);
-                                            ?>
-                                                <div class="relative w-full h-full cursor-pointer" onclick="window.open('<?php echo htmlspecialchars($media['url']); ?>', '_blank')">
-                                                    <img src="https://img.youtube.com/vi/<?php echo $ytId; ?>/maxresdefault.jpg" class="w-full h-full object-cover opacity-80 hover:opacity-100 transition duration-500" onerror="this.src='https://img.youtube.com/vi/<?php echo $ytId; ?>/hqdefault.jpg'">
-                                                    <div class="absolute inset-0 flex items-center justify-center">
-                                                        <div class="w-16 h-16 bg-red-600/90 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,0,0,0.5)] backdrop-blur-sm transform transition hover:scale-110">
-                                                            <i class="ri-play-fill text-4xl text-white ml-1"></i>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            <?php elseif($media['type'] == 'video'): ?>
-                                                <video src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover" controls playsinline preload="metadata"></video>
-                                            <?php else: ?>
-                                                <img src="<?php echo htmlspecialchars(strpos($media['url'], 'http') === 0 ? $media['url'] : $media['url']); ?>" class="w-full h-full object-cover cursor-pointer hover:opacity-90 transition">
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                                
-                                <?php if($mediaCount > 1): ?>
-                                    <div class="swiper-pagination"></div>
-                                    <div class="swiper-button-next custom-swiper-btn"></div>
-                                    <div class="swiper-button-prev custom-swiper-btn"></div>
-                                    <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full z-10 border border-white/10">
-                                        <i class="ri-gallery-fill mr-1"></i> 1 / <?php echo $mediaCount; ?>
+                </div>
+
+            <?php else: ?>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+
+                    <?php foreach ($latestServices as $service): ?>
+
+                        <?php
+                        $meta = service_type_meta(
+                            $service['file_type'] ?? 'web'
+                        );
+
+                        $thumbnail = service_media_url(
+                            $service['thumbnail'] ?? ''
+                        );
+
+                        $features = service_feature_data(
+                            $service['features'] ?? ''
+                        );
+                        ?>
+
+                        <article class="group bg-[#111] border border-white/10 rounded-3xl overflow-hidden hover:border-yellow-500/40 transition flex flex-col">
+
+                            <a
+                                href="index.php?page=service-details&id=<?= (int) $service['id'] ?>"
+                                class="block h-60 bg-gradient-to-br from-[#171717] to-black overflow-hidden relative"
+                            >
+
+                                <?php if ($thumbnail !== ''): ?>
+
+                                    <img
+                                        src="<?= e($thumbnail) ?>"
+                                        alt="<?= e($service['title']) ?>"
+                                        loading="lazy"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                                    >
+
+                                <?php else: ?>
+
+                                    <div class="w-full h-full flex items-center justify-center">
+
+                                        <i class="<?= e($meta['icon']) ?> text-7xl text-yellow-500/40"></i>
+
                                     </div>
+
                                 <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
 
-                    <!-- Actions & Price -->
-                    <div class="p-4 bg-gradient-to-r from-white/5 to-transparent border-b border-white/5">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <span class="text-accent text-[11px] uppercase tracking-[0.2em] font-black block mb-1">
-                                    <?php echo ($post['file_type'] == 'app') ? '📱 Mobile App' : '💻 PHP Script'; ?>
+                                <span class="absolute top-4 left-4 bg-black/75 border border-white/10 backdrop-blur px-3 py-1.5 rounded-full text-xs font-bold text-yellow-500">
+                                    <?= e($meta['badge']) ?>
                                 </span>
-                                <span class="text-white font-bold text-2xl drop-shadow-md">$<?php echo number_format($post['price_basic'], 2); ?></span>
-                            </div>
-                            
-                            <form action="index.php?page=cart_action" method="POST">
-                                <input type="hidden" name="action" value="add">
-                                <input type="hidden" name="product_id" value="<?php echo $post['id']; ?>">
-                                <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($post['title']); ?>">
-                                <input type="hidden" name="product_price" value="<?php echo $post['price_basic']; ?>">
-                                
-                                <button type="submit" class="bg-white text-black hover:bg-accent px-6 py-2.5 rounded-full font-bold flex items-center gap-2 transition-all transform hover:scale-105 shadow-lg">
-                                    <i class="ri-shopping-bag-3-fill"></i> Add to Cart
-                                </button>
-                            </form>
-                        </div>
-                    </div>
 
-                    <!-- Engagement (Like, Comment, Share) -->
-                    <div class="px-2 py-3">
-                        <div class="flex justify-between items-center text-gray-400 text-[13px] px-3 pb-3 mb-1 border-b border-white/5">
-                            <div class="flex items-center gap-1.5 cursor-pointer hover:text-white transition">
-                                <div class="flex -space-x-1">
-                                    <div class="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center ring-2 ring-[#111] z-20"><i class="ri-thumb-up-fill text-white text-[10px]"></i></div>
-                                    <div class="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center ring-2 ring-[#111] z-10"><i class="ri-heart-fill text-white text-[10px]"></i></div>
-                                </div>
-                                <span class="font-medium ml-1 text-white"><?php echo number_format(rand(100, 2500)); ?></span>
-                            </div>
-                            <div class="flex gap-4">
-                                <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="hover:text-white hover:underline cursor-pointer transition"><?php echo rand(10, 150); ?> comments</a>
-                                <span class="hover:text-white cursor-pointer transition"><?php echo rand(5, 50); ?> shares</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between px-1 pt-1">
-                            <button class="flex-1 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 py-2 rounded-xl font-semibold transition text-[15px]">
-                                <i class="ri-thumb-up-line text-xl"></i> Like
-                            </button>
-                            <a href="index.php?page=service-details&id=<?php echo $post['id']; ?>" class="flex-1 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 py-2 rounded-xl font-semibold transition text-[15px]">
-                                <i class="ri-chat-3-line text-xl"></i> Comment
                             </a>
-                            <button class="flex-1 flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-white/5 py-2 rounded-xl font-semibold transition text-[15px]">
-                                <i class="ri-share-forward-line text-xl"></i> Share
-                            </button>
-                        </div>
-                    </div>
 
-                </article>
-            <?php endforeach; ?>
+                            <div class="p-6 flex flex-col flex-1">
+
+                                <a href="index.php?page=service-details&id=<?= (int) $service['id'] ?>">
+
+                                    <h3 class="text-xl font-bold group-hover:text-yellow-500 transition">
+                                        <?= e($service['title']) ?>
+                                    </h3>
+
+                                </a>
+
+                                <p class="text-gray-400 text-sm leading-6 mt-3 mb-5">
+                                    <?= e(
+                                        service_excerpt(
+                                            $service['short_desc'] ?? ''
+                                        )
+                                    ) ?>
+                                </p>
+
+                                <?php if ($features['tech'] !== []): ?>
+
+                                    <div class="flex flex-wrap gap-2 mb-6">
+
+                                        <?php foreach (
+                                            array_slice(
+                                                $features['tech'],
+                                                0,
+                                                3
+                                            ) as $tech
+                                        ): ?>
+
+                                            <span class="text-[11px] font-bold px-2.5 py-1 bg-white/5 border border-white/10 rounded-md text-gray-300">
+                                                <?= e($tech) ?>
+                                            </span>
+
+                                        <?php endforeach; ?>
+
+                                    </div>
+
+                                <?php endif; ?>
+
+                                <div class="mt-auto flex items-center justify-between gap-4">
+
+                                    <div>
+                                        <span class="block text-xs text-gray-500">
+                                            Starting from
+                                        </span>
+
+                                        <strong class="text-2xl">
+                                            $<?= number_format(
+                                                (float) $service['price_basic'],
+                                                2
+                                            ) ?>
+                                        </strong>
+                                    </div>
+
+                                    <form
+                                        action="api/cart_action.php"
+                                        method="POST"
+                                    >
+                                        <?= csrf_field() ?>
+
+                                        <input
+                                            type="hidden"
+                                            name="action"
+                                            value="add"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="product_id"
+                                            value="<?= (int) $service['id'] ?>"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="px-5 py-3 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition"
+                                        >
+                                            <i class="ri-shopping-cart-2-line mr-1"></i>
+                                            Add
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        </article>
+
+                    <?php endforeach; ?>
+
+                </div>
+
+            <?php endif; ?>
 
         </div>
     </section>
+
+    <section class="py-24 px-5">
+
+        <div class="max-w-5xl mx-auto rounded-[2rem] border border-yellow-500/20 bg-gradient-to-r from-yellow-500/10 to-transparent p-8 md:p-14 text-center">
+
+            <h2 class="text-3xl md:text-5xl font-bold">
+                Need a custom app, website or automation?
+            </h2>
+
+            <p class="text-gray-400 mt-4 mb-8">
+                Share your requirements and get a solution
+                made for your exact business needs.
+            </p>
+
+            <a
+                href="index.php?page=contact"
+                class="inline-flex items-center gap-2 px-7 py-4 rounded-full bg-yellow-500 text-black font-bold hover:bg-yellow-400"
+            >
+                Start Your Project
+                <i class="ri-arrow-right-line"></i>
+            </a>
+
+        </div>
+
+    </section>
+
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var swipers = document.querySelectorAll('.post-swiper');
-        
-        swipers.forEach(function(swiperContainer) {
-            var counterBadge = swiperContainer.querySelector('.absolute.top-4');
-
-            new Swiper(swiperContainer, {
-                slidesPerView: 1,
-                spaceBetween: 0,
-                loop: false,
-                pagination: {
-                    el: swiperContainer.querySelector('.swiper-pagination'),
-                    clickable: true,
-                    dynamicBullets: true,
-                },
-                navigation: {
-                    nextEl: swiperContainer.querySelector('.swiper-button-next'),
-                    prevEl: swiperContainer.querySelector('.swiper-button-prev'),
-                },
-                on: {
-                    slideChange: function () {
-                        if(counterBadge) {
-                            var currentSlide = this.realIndex + 1;
-                            var totalSlides = this.slides.length;
-                            counterBadge.innerHTML = `<i class="ri-gallery-fill mr-1"></i> ${currentSlide} / ${totalSlides}`;
-                        }
-                    }
-                }
-            });
-        });
-    });
-</script>
-
-<style>
-    .custom-swiper-btn {
-        background-color: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(4px);
-        width: 35px !important;
-        height: 35px !important;
-        border-radius: 50%;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .custom-swiper-btn::after {
-        font-size: 14px !important;
-        font-weight: bold;
-    }
-    .post-swiper:hover .custom-swiper-btn {
-        opacity: 1; 
-    }
-    .swiper-pagination-bullet {
-        background: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1 !important;
-    }
-    .swiper-pagination-bullet-active {
-        background: #F4B90B !important; 
-        transform: scale(1.2);
-    }
-</style>

@@ -1,32 +1,144 @@
 <?php
-// api/cart_action.php
-session_start();
+declare(strict_types=1);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] == 'add') {
-    
-    $product_id = intval($_POST['product_id']);
-    $name = $_POST['product_name'];
-    $price = floatval($_POST['product_price']);
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/cart.php';
 
-    // কার্ট না থাকলে তৈরি করো
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
+if (!request_is_post()) {
+    http_response_code(405);
+    header('Allow: POST');
+
+    exit('Method Not Allowed');
+}
+
+/*
+|--------------------------------------------------------------------------
+| Every cart action requires CSRF verification
+|--------------------------------------------------------------------------
+*/
+
+verify_csrf();
+
+$action = (string) ($_POST['action'] ?? '');
+
+$allowedActions = [
+    'add',
+    'increase',
+    'decrease',
+    'remove',
+];
+
+if (!in_array($action, $allowedActions, true)) {
+    flash('error', 'Invalid cart action.');
+
+    redirect('../index.php?page=checkout');
+}
+
+$serviceId = filter_input(
+    INPUT_POST,
+    'product_id',
+    FILTER_VALIDATE_INT
+);
+
+if (!$serviceId || $serviceId < 1) {
+    flash('error', 'Invalid service.');
+
+    redirect('../index.php?page=portfolio');
+}
+
+$cart = cart_quantities();
+
+/*
+|--------------------------------------------------------------------------
+| Add service
+|--------------------------------------------------------------------------
+*/
+
+if ($action === 'add') {
+    $statement = $pdo->prepare(
+        'SELECT id
+         FROM services
+         WHERE id = ?
+           AND is_active = 1
+         LIMIT 1'
+    );
+
+    $statement->execute([$serviceId]);
+
+    if (!$statement->fetch()) {
+        flash(
+            'error',
+            'This service is not available.'
+        );
+
+        redirect('../index.php?page=portfolio');
     }
 
-    // আইটেম অ্যারে তৈরি
-    $item = [
-        'id' => $product_id,
-        'name' => $name,
-        'price' => $price,
-        'qty' => 1
-    ];
+    $currentQuantity = (int) (
+        $cart[$serviceId] ?? 0
+    );
 
-    // যদি প্রোডাক্ট অলরেডি থাকে, তাহলে কিছু করবেনা (অথবা কোয়ান্টিটি বাড়াতে পারেন)
-    // আমরা এখানে সহজ রাখার জন্য রিপ্লেস/আপডেট করছি
-    $_SESSION['cart'][$product_id] = $item;
+    $cart[$serviceId] = min(
+        10,
+        $currentQuantity + 1
+    );
 
-    // চেকআউট পেজে পাঠান
-    header("Location: ../index.php?page=checkout");
-    exit;
+    $_SESSION['cart'] = $cart;
+
+    flash(
+        'success',
+        'Service added to your cart.'
+    );
+
+    redirect('../index.php?page=checkout');
 }
-?>
+
+/*
+|--------------------------------------------------------------------------
+| Existing cart item required
+|--------------------------------------------------------------------------
+*/
+
+if (!isset($cart[$serviceId])) {
+    flash(
+        'error',
+        'The cart item was not found.'
+    );
+
+    redirect('../index.php?page=checkout');
+}
+
+/*
+|--------------------------------------------------------------------------
+| Update quantity or remove
+|--------------------------------------------------------------------------
+*/
+
+if ($action === 'increase') {
+    $cart[$serviceId] = min(
+        10,
+        (int) $cart[$serviceId] + 1
+    );
+}
+
+if ($action === 'decrease') {
+    $cart[$serviceId] =
+        (int) $cart[$serviceId] - 1;
+
+    if ($cart[$serviceId] < 1) {
+        unset($cart[$serviceId]);
+    }
+}
+
+if ($action === 'remove') {
+    unset($cart[$serviceId]);
+
+    flash(
+        'success',
+        'Service removed from your cart.'
+    );
+}
+
+$_SESSION['cart'] = $cart;
+
+redirect('../index.php?page=checkout');

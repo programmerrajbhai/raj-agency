@@ -1,142 +1,217 @@
 <?php
-if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
-    echo "<script>window.location.href='index.php?page=portfolio';</script>";
-    exit;
-}
+declare(strict_types=1);
 
-// Calculate Total
-$total = 0;
-foreach($_SESSION['cart'] as $item) {
-    $total += $item['price'] * $item['qty'];
-}
+$services = $pdo->query(
+    'SELECT id, title
+     FROM services
+     WHERE is_active = 1
+     ORDER BY title ASC'
+)->fetchAll();
+
+$contactError = flash('contact_error');
+
+$old = $_SESSION['_contact_old'] ?? [];
+
+unset($_SESSION['_contact_old']);
 ?>
 
-<main class="pt-32 pb-20 min-h-screen bg-[#050505] flex items-center justify-center">
-    <section class="max-w-6xl mx-auto px-6 w-full">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            
-            <div class="lg:col-span-8 space-y-8">
-                
-                <div class="bg-[#101010] border border-white/5 rounded-3xl p-8">
-                    <h3 class="font-display text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">1</span> 
-                        Order Items
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <?php foreach($_SESSION['cart'] as $item): ?>
-                            <div class="flex justify-between items-center bg-black/20 p-4 rounded-xl border border-white/5">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-bold text-white"><?php echo htmlspecialchars($item['name']); ?></h4>
-                                        <p class="text-xs text-muted">Standard License</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-bold text-white">$<?php echo $item['price']; ?></p>
-                                    <p class="text-xs text-muted">Qty: <?php echo $item['qty']; ?></p>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+<main class="pt-32 pb-20 min-h-screen bg-[#050505] relative overflow-hidden">
 
-                <div class="bg-[#101010] border border-white/5 rounded-3xl p-8">
-                    <h3 class="font-display text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">2</span> 
-                        Your Details
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-xs text-muted uppercase font-bold">Full Name</label>
-                            <input type="text" class="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none transition" placeholder="John Doe">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs text-muted uppercase font-bold">Email Address</label>
-                            <input type="email" class="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none transition" placeholder="john@example.com">
-                        </div>
-                    </div>
-                </div>
+    <div class="absolute top-20 left-[-10rem] w-96 h-96 bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-                <div class="bg-[#101010] border border-white/5 rounded-3xl p-8">
-                    <h3 class="font-display text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                        <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm">3</span> 
-                        Payment
-                    </h3>
-                    
-                    <div class="grid grid-cols-2 gap-4 mb-6">
-                        <label class="cursor-pointer border border-accent bg-accent/10 p-4 rounded-xl flex items-center gap-3 transition">
-                            <input type="radio" name="payment" checked class="accent-accent w-5 h-5">
-                            <span class="font-bold text-sm text-white">Credit Card</span>
-                        </label>
-                        <label class="cursor-pointer border border-white/10 bg-[#050505] p-4 rounded-xl flex items-center gap-3 transition opacity-50 hover:opacity-100">
-                            <input type="radio" name="payment" class="accent-accent w-5 h-5">
-                            <span class="font-bold text-sm text-white">PayPal</span>
-                        </label>
-                    </div>
+    <section class="max-w-6xl mx-auto px-5 relative z-10">
 
-                    <div class="space-y-4">
-                        <div class="space-y-2">
-                            <label class="text-xs text-muted uppercase font-bold">Card Number</label>
-                            <div class="relative">
-                                <input type="text" placeholder="0000 0000 0000 0000" class="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none pl-12">
-                                <svg class="w-5 h-5 absolute left-4 top-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-6">
-                            <div class="space-y-2">
-                                <label class="text-xs text-muted uppercase font-bold">Expiry Date</label>
-                                <input type="text" placeholder="MM/YY" class="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none">
-                            </div>
-                            <div class="space-y-2">
-                                <label class="text-xs text-muted uppercase font-bold">CVC / CVC2</label>
-                                <input type="text" placeholder="123" class="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent focus:outline-none">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="max-w-3xl mb-12">
+            <span class="text-yellow-500 text-sm font-bold uppercase tracking-[.25em]">
+                Contact Raj Agency
+            </span>
 
+            <h1 class="text-4xl md:text-6xl font-bold text-white mt-4 mb-5">
+                Let’s Build Your Next Project.
+            </h1>
+
+            <p class="text-gray-400 text-lg">
+                Tell me what you need. I will review your requirements
+                and contact you as soon as possible.
+            </p>
+        </div>
+
+        <?php if ($contactError): ?>
+            <div class="mb-7 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300">
+                <?= e($contactError) ?>
             </div>
+        <?php endif; ?>
 
-            <div class="lg:col-span-4">
-                <div class="bg-card border border-white/10 rounded-3xl p-6 sticky top-28 shadow-2xl">
-                    <h3 class="text-lg font-bold text-white mb-6 border-b border-white/10 pb-4">Order Summary</h3>
-                    
-                    <div class="space-y-3 mb-6">
-                        <div class="flex justify-between text-sm text-muted">
-                            <span>Subtotal</span>
-                            <span class="text-white font-bold">$<?php echo number_format($total, 2); ?></span>
-                        </div>
-                        <div class="flex justify-between text-sm text-muted">
-                            <span>Tax (VAT)</span>
-                            <span class="text-white font-bold">$0.00</span>
-                        </div>
-                        <div class="flex justify-between text-sm text-muted">
-                            <span>Discount</span>
-                            <span class="text-accent">- $0.00</span>
-                        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <div class="lg:col-span-7">
+
+                <form
+                    action="api/submit_contact.php"
+                    method="POST"
+                    class="bg-[#111] border border-white/10 rounded-3xl p-6 md:p-8 space-y-5"
+                >
+                    <?= csrf_field() ?>
+
+                    <!-- Spam protection -->
+                    <div class="hidden" aria-hidden="true">
+                        <label for="website">Website</label>
+
+                        <input
+                            id="website"
+                            name="website"
+                            type="text"
+                            tabindex="-1"
+                            autocomplete="off"
+                        >
                     </div>
 
-                    <div class="border-t border-white/10 pt-4 flex justify-between items-center mb-8">
-                        <span class="text-xl font-bold text-white">Total</span>
-                        <span class="text-3xl font-display font-bold text-accent">$<?php echo number_format($total, 2); ?></span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                        <div>
+                            <label
+                                for="name"
+                                class="block text-sm text-gray-400 mb-2"
+                            >
+                                Your name
+                            </label>
+
+                            <input
+                                id="name"
+                                name="name"
+                                type="text"
+                                maxlength="100"
+                                required
+                                value="<?= e($old['name'] ?? '') ?>"
+                                class="w-full bg-black border border-white/10 rounded-xl p-3.5 outline-none focus:border-yellow-500"
+                            >
+                        </div>
+
+                        <div>
+                            <label
+                                for="email"
+                                class="block text-sm text-gray-400 mb-2"
+                            >
+                                Email address
+                            </label>
+
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                maxlength="190"
+                                required
+                                value="<?= e($old['email'] ?? '') ?>"
+                                class="w-full bg-black border border-white/10 rounded-xl p-3.5 outline-none focus:border-yellow-500"
+                            >
+                        </div>
+
                     </div>
 
-                    <button class="w-full py-4 bg-accent text-black font-bold uppercase tracking-widest rounded-xl hover:bg-[#FFD700] transition shadow-lg shadow-accent/20 flex items-center justify-center gap-2 group">
-                        <svg class="w-5 h-5 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                        Pay $<?php echo number_format($total, 2); ?>
+                    <div>
+                        <label
+                            for="service_id"
+                            class="block text-sm text-gray-400 mb-2"
+                        >
+                            Interested service
+                        </label>
+
+                        <select
+                            id="service_id"
+                            name="service_id"
+                            class="w-full bg-black border border-white/10 rounded-xl p-3.5 outline-none focus:border-yellow-500"
+                        >
+                            <option value="">
+                                General / Custom Project
+                            </option>
+
+                            <?php foreach ($services as $service): ?>
+                                <option
+                                    value="<?= (int) $service['id'] ?>"
+                                    <?= (string) ($old['service_id'] ?? '') === (string) $service['id'] ? 'selected' : '' ?>
+                                >
+                                    <?= e($service['title']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label
+                            for="message"
+                            class="block text-sm text-gray-400 mb-2"
+                        >
+                            Project details
+                        </label>
+
+                        <textarea
+                            id="message"
+                            name="message"
+                            rows="7"
+                            minlength="10"
+                            maxlength="3000"
+                            required
+                            placeholder="Describe your project, required features, budget, and expected delivery time."
+                            class="w-full bg-black border border-white/10 rounded-xl p-3.5 outline-none focus:border-yellow-500"
+                        ><?= e($old['message'] ?? '') ?></textarea>
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="w-full py-4 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition"
+                    >
+                        Send Message
                     </button>
-                    
-                    <p class="text-center text-[10px] text-muted mt-4 flex justify-center items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                        Secure 256-bit SSL Encrypted
-                    </p>
-                </div>
+
+                </form>
             </div>
+
+            <aside class="lg:col-span-5 space-y-5">
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-7">
+
+                    <div class="w-12 h-12 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center text-2xl mb-5">
+                        <i class="ri-whatsapp-line"></i>
+                    </div>
+
+                    <h2 class="text-xl font-bold mb-2">
+                        WhatsApp
+                    </h2>
+
+                    <p class="text-gray-400 text-sm mb-5">
+                        For a faster response, contact me directly on WhatsApp.
+                    </p>
+
+                    <a
+                        href="https://wa.me/8801310100239"
+                        target="_blank"
+                        rel="noopener"
+                        class="inline-flex items-center gap-2 text-green-400 font-bold hover:underline"
+                    >
+                        +880 1310-100239
+                        <i class="ri-external-link-line"></i>
+                    </a>
+
+                </div>
+
+                <div class="bg-[#111] border border-white/10 rounded-3xl p-7">
+
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500/10 text-yellow-500 flex items-center justify-center text-2xl mb-5">
+                        <i class="ri-time-line"></i>
+                    </div>
+
+                    <h2 class="text-xl font-bold mb-2">
+                        Response Time
+                    </h2>
+
+                    <p class="text-gray-400 text-sm">
+                        Usually within 24 hours. Share complete requirements
+                        for a faster and more accurate response.
+                    </p>
+
+                </div>
+
+            </aside>
 
         </div>
     </section>

@@ -1,106 +1,249 @@
 <?php
-// api/process_order.php
-session_start();
-require_once '../config/db.php';
+declare(strict_types=1);
 
-// ১. চেক করা হচ্ছে রিকোয়েস্টটি POST কি না এবং কার্টে কিছু আছে কি না
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['cart'])) {
-    
-    // ২. ডাটা স্যানিটাইজেশন (XSS বা ক্ষতিকর কোড থেকে বাঁচতে)
-    $full_name = htmlspecialchars(strip_tags($_POST['full_name'] ?? ''));
-    $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
-    $country = htmlspecialchars(strip_tags($_POST['country'] ?? ''));
-    $payment_method = htmlspecialchars(strip_tags($_POST['payment_method'] ?? ''));
+require_once __DIR__
+    . '/../config/db.php';
 
-    // ৩. সিকিউরিটির জন্য টোটাল প্রাইস আবার ব্যাকএন্ডে ক্যালকুলেট করা
-    $total_amount = 0;
-    foreach ($_SESSION['cart'] as $item) {
-        $total_amount += $item['price'] * $item['qty'];
-    }
-    
-    // কার্টের আইটেমগুলো JSON ফরম্যাটে ডাটাবেসে সেভ করার জন্য
-    $order_data = json_encode($_SESSION['cart']);
+require_once __DIR__
+    . '/../includes/cart.php';
 
-    try {
-        // ৪. Orders টেবিল না থাকলে অটোমেটিক তৈরি করে নিবে (সেফটির জন্য)
-        $pdo->exec("CREATE TABLE IF NOT EXISTS orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            full_name VARCHAR(100) NOT NULL,
-            email VARCHAR(100) NOT NULL,
-            country VARCHAR(50) NOT NULL,
-            payment_method VARCHAR(50) NOT NULL,
-            total_amount DECIMAL(10,2) NOT NULL,
-            order_data TEXT NOT NULL,
-            status VARCHAR(20) DEFAULT 'Completed',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
+if (!request_is_post()) {
+    http_response_code(405);
+    header('Allow: POST');
 
-        // ৫. ডাটাবেসে অর্ডার ইনসার্ট করা
-        $stmt = $pdo->prepare("INSERT INTO orders (full_name, email, country, payment_method, total_amount, order_data) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$full_name, $email, $country, $payment_method, $total_amount, $order_data]);
-
-        // ৬. অর্ডার সাকসেসফুল হলে কার্ট ক্লিয়ার করা
-        unset($_SESSION['cart']);
-        
-        $success = true;
-
-    } catch(PDOException $e) {
-        $success = false;
-        $error_message = $e->getMessage();
-    }
-} else {
-    // যদি কেউ ডিরেক্ট এই লিংকে হিট করে, তাকে হোমপেজে পাঠিয়ে দিবে
-    header("Location: ../index.php");
-    exit;
+    exit('Method Not Allowed');
 }
-?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processing Order... | Raj Agency</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        body { background-color: #050505; }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen">
+verify_csrf();
 
-<!-- প্রসেসিং অ্যানিমেশন এবং অ্যালার্ট -->
-<script>
-    <?php if (isset($success) && $success): ?>
-        Swal.fire({
-            title: 'Payment Successful!',
-            text: 'Thank you for your order. We will contact you shortly.',
-            icon: 'success',
-            confirmButtonColor: '#F4B90B',
-            background: '#111',
-            color: '#fff',
-            iconColor: '#45bd62',
-            allowOutsideClick: false,
-            timer: 3500,
-            timerProgressBar: true,
-            showConfirmButton: false
-        }).then((result) => {
-            window.location.href = '../index.php?page=portfolio'; // সাকসেস হলে পোর্টফোলিওতে রিডাইরেক্ট
-        });
-    <?php else: ?>
-        Swal.fire({
-            title: 'Order Failed!',
-            text: 'Something went wrong while processing your order. Please try again.',
-            icon: 'error',
-            confirmButtonColor: '#f3425f',
-            background: '#111',
-            color: '#fff',
-            iconColor: '#f3425f'
-        }).then((result) => {
-            window.location.href = '../index.php?page=checkout'; // ফেইল হলে আবার চেকআউটে ফেরত পাঠাবে
-        });
-    <?php endif; ?>
-</script>
+$fullName = clean_text(
+    $_POST['full_name'] ?? '',
+    100
+);
 
-</body>
-</html>
+$email = trim(
+    (string) (
+        $_POST['email'] ?? ''
+    )
+);
+
+$phone = clean_text(
+    $_POST['phone'] ?? '',
+    30
+);
+
+$country = clean_text(
+    $_POST['country'] ?? '',
+    80
+);
+
+$notes = clean_text(
+    $_POST['notes'] ?? '',
+    1000
+);
+
+$_SESSION['_checkout_old'] = [
+    'full_name' => $fullName,
+    'email' => $email,
+    'phone' => $phone,
+    'country' => $country,
+    'notes' => $notes,
+];
+
+$errors = [];
+
+if (mb_strlen($fullName) < 2) {
+    $errors[] =
+        'Enter your full name.';
+}
+
+if (
+    filter_var(
+        $email,
+        FILTER_VALIDATE_EMAIL
+    ) === false
+    || strlen($email) > 190
+) {
+    $errors[] =
+        'Enter a valid email address.';
+}
+
+if (
+    !preg_match(
+        '/^[0-9+()\-\s]{7,30}$/',
+        $phone
+    )
+) {
+    $errors[] =
+        'Enter a valid phone or WhatsApp number.';
+}
+
+if (mb_strlen($country) < 2) {
+    $errors[] =
+        'Enter your country.';
+}
+
+$cartItems =
+    load_cart_items($pdo);
+
+if ($cartItems === []) {
+    $errors[] =
+        'Your cart is empty.';
+}
+
+$lastOrderTime = (int) (
+    $_SESSION['last_order_time']
+    ?? 0
+);
+
+if (
+    $lastOrderTime > 0
+    && time() - $lastOrderTime < 10
+) {
+    $errors[] =
+        'Please wait a few seconds before submitting another order.';
+}
+
+if ($errors !== []) {
+    flash(
+        'checkout_error',
+        implode(' ', $errors)
+    );
+
+    redirect(
+        '../index.php?page=checkout'
+    );
+}
+
+$total = cart_total($cartItems);
+
+$orderNumber =
+    'RAJ-'
+    . date('Ymd')
+    . '-'
+    . strtoupper(
+        bin2hex(
+            random_bytes(4)
+        )
+    );
+
+try {
+    $pdo->beginTransaction();
+
+    $orderStatement = $pdo->prepare(
+        'INSERT INTO orders (
+            order_number,
+            full_name,
+            email,
+            phone,
+            country,
+            notes,
+            total_amount,
+            status
+        ) VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )'
+    );
+
+    $orderStatement->execute([
+        $orderNumber,
+        $fullName,
+        $email,
+        $phone,
+        $country,
+
+        $notes !== ''
+            ? $notes
+            : null,
+
+        $total,
+        'pending',
+    ]);
+
+    $orderId = (int) (
+        $pdo->lastInsertId()
+    );
+
+    $itemStatement = $pdo->prepare(
+        'INSERT INTO order_items (
+            order_id,
+            service_id,
+            service_title,
+            unit_price,
+            quantity,
+            line_total
+        ) VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )'
+    );
+
+    foreach ($cartItems as $item) {
+        $itemStatement->execute([
+            $orderId,
+            $item['id'],
+            $item['title'],
+            $item['price'],
+            $item['quantity'],
+            $item['line_total'],
+        ]);
+    }
+
+    $pdo->commit();
+
+    $_SESSION['cart'] = [];
+
+    unset(
+        $_SESSION['_checkout_old']
+    );
+
+    $_SESSION['last_order_time'] =
+        time();
+
+    $_SESSION['order_success'] = [
+        'order_number' =>
+            $orderNumber,
+
+        'full_name' =>
+            $fullName,
+
+        'email' =>
+            $email,
+
+        'total' =>
+            $total,
+    ];
+
+    redirect(
+        '../index.php?page=order-success'
+    );
+} catch (Throwable $exception) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    error_log(
+        'Order creation failed: '
+        . $exception->getMessage()
+    );
+
+    flash(
+        'checkout_error',
+        'The order could not be submitted. Please try again.'
+    );
+
+    redirect(
+        '../index.php?page=checkout'
+    );
+}

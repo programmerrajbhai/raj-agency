@@ -1,31 +1,102 @@
 <?php
-session_start(); // কার্ট সেশনের জন্য জরুরি
+declare(strict_types=1);
 
-require_once 'config/db.php'; 
+require_once __DIR__ . '/config/db.php';
 
-// ডিফল্ট পেজ 'feed' করে দেওয়া হলো, যাতে সাইটে ঢুকলেই নিউজফিড দেখা যায়
-$page = isset($_GET['page']) ? $_GET['page'] : 'feed';
+$page = clean_text(
+    $_GET['page'] ?? 'home',
+    50
+);
 
-// কার্ট অ্যাকশন হ্যান্ডেল করা (Add to Cart)
-if ($page == 'cart_action') {
-    include 'api/cart_action.php';
+/*
+|--------------------------------------------------------------------------
+| Cart API compatibility route
+|--------------------------------------------------------------------------
+*/
+
+if ($page === 'cart_action') {
+    require __DIR__ . '/api/cart_action.php';
+
     exit;
 }
 
-include 'includes/header.php';
+/*
+|--------------------------------------------------------------------------
+| Allowed Frontend Pages
+|--------------------------------------------------------------------------
+*/
 
-// 'feed' পেজটি allowed_pages এর তালিকায় যুক্ত করা হয়েছে
-$allowed_pages = ['home', 'feed', 'services', 'portfolio', 'checkout', 'contact', 'about', 'service-details'];
+$allowedPages = [
+    'home',
+    'feed',
 
-if (in_array($page, $allowed_pages)) {
-    if (file_exists("pages/{$page}.php")) {
-        include "pages/{$page}.php";
-    } else {
-        echo "<h1 class='text-center text-red-500 mt-32'>404 - Page File Not Found</h1>";
-    }
-} else {
-    echo "<h1 class='text-center text-white mt-32'>404 - Page Not Found</h1>";
+    // Social-style project portfolio
+    'portfolio',
+    'project-details',
+
+    // Purchasable services/products
+    'products',
+    'service-details',
+    'checkout',
+    'order-success',
+
+    'contact',
+    'about',
+];
+
+if (!in_array($page, $allowedPages, true)) {
+    http_response_code(404);
+
+    $page = '404';
 }
 
-include 'includes/footer.php';
-?>
+/*
+|--------------------------------------------------------------------------
+| Website Header
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__ . '/includes/header.php';
+
+/*
+|--------------------------------------------------------------------------
+| Page Content
+|--------------------------------------------------------------------------
+*/
+
+if ($page === '404') {
+    ?>
+
+    <main class="min-h-screen pt-40 text-center px-5 bg-[#050505]">
+
+        <i class="ri-error-warning-line text-7xl text-yellow-500"></i>
+
+        <h1 class="text-5xl font-bold text-white mt-5">
+            404
+        </h1>
+
+        <p class="text-gray-400 mt-3">
+            The requested page was not found.
+        </p>
+
+        <a
+            href="index.php?page=home"
+            class="inline-block mt-7 px-6 py-3 rounded-xl bg-yellow-500 text-black font-bold"
+        >
+            Return Home
+        </a>
+
+    </main>
+
+    <?php
+} else {
+    require __DIR__ . '/pages/' . $page . '.php';
+}
+
+/*
+|--------------------------------------------------------------------------
+| Website Footer
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__ . '/includes/footer.php';

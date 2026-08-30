@@ -1,12 +1,98 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/cart.php';
+
+$pageTitles = [
+    'home' => 'Raj Agency | App, Website & Automation Developer',
+    'feed' => 'Latest Projects | Raj Agency',
+    'portfolio' => 'Portfolio & Digital Products | Raj Agency',
+    'checkout' => 'Complete Your Order | Raj Agency',
+    'contact' => 'Contact Raj Agency | Start Your Project',
+    'about' => 'About Habib Islam Raj | Raj Agency',
+    'service-details' => 'Service Details | Raj Agency',
+    'order-success' => 'Order Received | Raj Agency',
+    '404' => 'Page Not Found | Raj Agency',
+];
+
+$documentTitle = $pageTitles[$page] ?? 'Raj Agency';
+
+$description = 'Professional Android, iOS, Flutter, website, custom software, and automation development services by Habib Islam Raj.';
+
+$currentCartCount = cart_count();
+
+$globalSuccess = flash('success');
+$globalError = flash('error');
+
+function nav_active(string $target, string $current): string
+{
+    return $target === $current
+        ? 'text-yellow-500'
+        : 'text-white';
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
+
+
+<link
+    rel="stylesheet"
+    href="assets/css/portfolio-premium.css"
+>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raj Agency | Premium Digital Assets</title>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="<?= e($description) ?>"
+    >
+
+    <meta name="theme-color" content="#050505">
+
+    <meta property="og:type" content="website">
+
+    <meta
+        property="og:title"
+        content="<?= e($documentTitle) ?>"
+    >
+
+    <meta
+        property="og:description"
+        content="<?= e($description) ?>"
+    >
+
+    <?php if (APP_URL !== ''): ?>
+        <link
+            rel="canonical"
+            href="<?= e(APP_URL . '/index.php?page=' . rawurlencode($page)) ?>"
+        >
+
+        <meta
+            property="og:url"
+            content="<?= e(APP_URL . '/index.php?page=' . rawurlencode($page)) ?>"
+        >
+    <?php endif; ?>
+
+    <title><?= e($documentTitle) ?></title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700;900&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet"
+    >
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <script>
@@ -15,71 +101,201 @@
                 extend: {
                     colors: {
                         bg: '#050505',
-                        card: '#101010', 
+                        card: '#101010',
                         border: '#1F1F1F',
                         accent: '#F4B90B',
-                        'accent-hover': '#FFD700',
-                        text: '#FFFFFF',
                         muted: '#9CA3AF'
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        display: ['Space Grotesk', 'sans-serif'],
-                    },
-                    animation: {
-                        'spin-slow': 'spin 10s linear infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-20px)' },
-                        }
+                        display: ['Space Grotesk', 'sans-serif']
                     }
                 }
             }
-        }
+        };
     </script>
 
     <style>
-        body { background-color: #050505; color: white; }
-        .glass-nav { background: rgba(5, 5, 5, 0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .nav-link { position: relative; }
-        .nav-link::after { content: ''; position: absolute; width: 0; height: 1px; bottom: -4px; left: 0; background: #F4B90B; transition: width 0.3s; }
-        .nav-link:hover::after { width: 100%; }
+        body {
+            background: #050505;
+            color: #fff;
+        }
+
+        .glass-nav {
+            background: rgba(5, 5, 5, .88);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .nav-link {
+            position: relative;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 1px;
+            bottom: -5px;
+            left: 0;
+            background: #F4B90B;
+            transition: width .3s;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
     </style>
 </head>
-<body class="antialiased font-sans selection:bg-accent selection:text-black">
+
+<body class="page-<?= e($page) ?> antialiased font-sans selection:bg-yellow-500 selection:text-black">
+
 
 <nav class="fixed w-full z-50 top-0 left-0 glass-nav">
-    <div class="max-w-7xl mx-auto px-6 h-24 flex justify-between items-center">
-        
-        <a href="index.php?page=home" class="text-2xl font-display font-bold uppercase tracking-tighter flex items-center gap-2">
-            <span class="w-3 h-3 bg-accent rounded-full"></span>
+
+    <div class="max-w-7xl mx-auto px-5 h-24 flex justify-between items-center">
+
+        <a
+            href="index.php?page=home"
+            class="text-xl md:text-2xl font-display font-bold uppercase tracking-tighter flex items-center gap-2"
+        >
+            <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
             Habib Islam Raj
         </a>
 
-        <ul class="hidden md:flex items-center gap-10 text-sm font-medium tracking-wide">
-            <li><a href="index.php?page=home" class="nav-link hover:text-accent transition">HOME</a></li>
-            <li><a href="index.php?page=portfolio" class="nav-link hover:text-accent transition">PORTFOLIO</a></li>
-            <li><a href="index.php?page=about" class="nav-link hover:text-accent transition">ABOUT ME</a></li>
-            <li><a href="index.php?page=contact" class="nav-link hover:text-accent transition">CONTACT</a></li>
+        <ul class="hidden lg:flex items-center gap-9 text-sm font-medium tracking-wide">
+
+            <li>
+                <a
+                    href="index.php?page=home"
+                    class="nav-link <?= nav_active('home', $page) ?> hover:text-yellow-500 transition"
+                >
+                    HOME
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="index.php?page=portfolio"
+                    class="nav-link <?= nav_active('portfolio', $page) ?> hover:text-yellow-500 transition"
+                >
+                    PORTFOLIO
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="index.php?page=about"
+                    class="nav-link <?= nav_active('about', $page) ?> hover:text-yellow-500 transition"
+                >
+                    ABOUT ME
+                </a>
+            </li>
+
+            <li>
+                <a
+                    href="index.php?page=contact"
+                    class="nav-link <?= nav_active('contact', $page) ?> hover:text-yellow-500 transition"
+                >
+                    CONTACT
+                </a>
+            </li>
+
         </ul>
 
-        <a href="index.php?page=contact" class="hidden md:flex px-8 py-3 bg-white text-black text-xs font-bold uppercase tracking-widest rounded-full hover:bg-accent transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(244,185,11,0.4)]">
-            Hire Me
-        </a>
+        <div class="flex items-center gap-3">
 
-        <button id="mobile-menu-btn" class="md:hidden space-y-2 cursor-pointer group z-50 relative">
-            <div class="w-8 h-[2px] bg-white group-hover:bg-accent transition"></div>
-            <div class="w-5 h-[2px] bg-white ml-auto group-hover:w-8 group-hover:bg-accent transition-all"></div>
-        </button>
+            <a
+                href="index.php?page=checkout"
+                class="relative w-11 h-11 rounded-full border border-white/10 flex items-center justify-center hover:border-yellow-500 hover:text-yellow-500 transition"
+                aria-label="Shopping cart"
+            >
+                <i class="ri-shopping-cart-2-line text-xl"></i>
+
+                <?php if ($currentCartCount > 0): ?>
+                    <span class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-yellow-500 text-black text-[11px] font-bold flex items-center justify-center">
+                        <?= $currentCartCount ?>
+                    </span>
+                <?php endif; ?>
+            </a>
+
+            <a
+                href="index.php?page=contact"
+                class="hidden md:flex px-6 py-3 bg-white text-black text-xs font-bold uppercase tracking-widest rounded-full hover:bg-yellow-500 transition"
+            >
+                Hire Me
+            </a>
+
+            <button
+                id="mobile-menu-btn"
+                type="button"
+                class="lg:hidden space-y-2 cursor-pointer group z-50 relative"
+                aria-label="Open menu"
+                aria-expanded="false"
+            >
+                <span class="block w-8 h-[2px] bg-white"></span>
+
+                <span class="block w-5 h-[2px] bg-white ml-auto"></span>
+            </button>
+
+        </div>
     </div>
 </nav>
 
-<div id="mobile-menu" class="fixed inset-0 bg-black/95 z-40 hidden flex flex-col items-center justify-center space-y-8 transition-all duration-300 opacity-0 translate-y-10 backdrop-blur-xl">
-    <a href="index.php?page=home" class="text-3xl font-display font-bold text-white hover:text-accent transition">HOME</a>
-    <a href="index.php?page=portfolio" class="text-3xl font-display font-bold text-white hover:text-accent transition">PORTFOLIO</a>
-    <a href="index.php?page=about" class="text-3xl font-display font-bold text-white hover:text-accent transition">ABOUT ME</a>
-    <a href="index.php?page=contact" class="text-3xl font-display font-bold text-white hover:text-accent transition">CONTACT</a>
+<div
+    id="mobile-menu"
+    class="fixed inset-0 bg-black/95 z-40 hidden flex-col items-center justify-center space-y-8 opacity-0 translate-y-10 backdrop-blur-xl"
+>
+    <a
+        href="index.php?page=home"
+        class="text-3xl font-bold hover:text-yellow-500"
+    >
+        HOME
+    </a>
+
+    <a
+        href="index.php?page=portfolio"
+        class="text-3xl font-bold hover:text-yellow-500"
+    >
+        PORTFOLIO
+    </a>
+
+    <a
+        href="index.php?page=about"
+        class="text-3xl font-bold hover:text-yellow-500"
+    >
+        ABOUT ME
+    </a>
+
+    <a
+        href="index.php?page=contact"
+        class="text-3xl font-bold hover:text-yellow-500"
+    >
+        CONTACT
+    </a>
+
+    <a
+        href="index.php?page=checkout"
+        class="text-3xl font-bold text-yellow-500"
+    >
+        CART (<?= $currentCartCount ?>)
+    </a>
 </div>
+
+<?php if ($globalSuccess): ?>
+    <div
+        class="fixed top-28 right-5 z-[70] max-w-md p-4 rounded-xl bg-green-500/95 text-white shadow-2xl"
+        role="status"
+    >
+        <?= e($globalSuccess) ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($globalError): ?>
+    <div
+        class="fixed top-28 right-5 z-[70] max-w-md p-4 rounded-xl bg-red-500/95 text-white shadow-2xl"
+        role="alert"
+    >
+        <?= e($globalError) ?>
+    </div>
+<?php endif; ?>

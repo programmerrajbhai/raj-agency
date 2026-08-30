@@ -76,7 +76,7 @@
 
             <!-- Buttons -->
             <div class="reveal-4 w-full max-w-[320px] lg:max-w-none flex gap-3 lg:gap-4 justify-start">
-                <a href="#newsfeed-section" class="flex-1 lg:flex-none lg:px-10 flex justify-center items-center bg-[#F4B90B] text-black hover:bg-yellow-400 text-[14px] lg:text-[16px] font-bold py-3.5 lg:py-4 rounded-xl lg:rounded-[20px] transition-all duration-300 shadow-[0_0_20px_rgba(244,185,11,0.25)] hover:shadow-[0_0_30px_rgba(244,185,11,0.4)]">
+               <a href="index.php?page=portfolio"class="flex-1 lg:flex-none lg:px-10 flex justify-center items-center bg-[#F4B90B] text-black hover:bg-yellow-400 text-[14px] lg:text-[16px] font-bold py-3.5 lg:py-4 rounded-xl lg:rounded-[20px] transition-all duration-300 shadow-[0_0_20px_rgba(244,185,11,0.25)] hover:shadow-[0_0_30px_rgba(244,185,11,0.4)]">
                     Explore Work
                 </a>
                 <a href="index.php?page=contact" class="w-12 h-12 lg:w-[56px] lg:h-[56px] flex-shrink-0 flex justify-center items-center bg-transparent border border-[#F4B90B]/30 hover:border-[#F4B90B] hover:bg-[#F4B90B]/10 text-[#F4B90B] rounded-xl lg:rounded-[20px] transition-all duration-300" title="Contact Me">

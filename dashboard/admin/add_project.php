@@ -1,0 +1,325 @@
+<?php
+declare(strict_types=1);
+
+require_once '../../config/db.php';
+require_once 'project_helpers.php';
+require_once 'project_details_helpers.php';
+
+require_admin();
+
+$errors = [];
+$existingMedia = [];
+$isEdit = false;
+
+$pageTitle = 'Add Portfolio Project';
+$submitText = 'Publish Project';
+
+$form = [
+    'title' => '',
+    'category' => '',
+    'client_name' => '',
+    'short_desc' => '',
+    'case_study_text' => '',
+    'thumbnail' => '',
+    'project_url' => '',
+    'github_url' => '',
+    'is_featured' => false,
+    'is_active' => true,
+    'sort_order' => 0,
+];
+
+$technologies = [];
+
+$details = project_details_defaults();
+
+if (request_is_post()) {
+    verify_csrf();
+
+    $form = [
+        'title' => clean_text(
+            $_POST['title'] ?? '',
+            150
+        ),
+
+        'category' => clean_text(
+            $_POST['category'] ?? '',
+            80
+        ),
+
+        'client_name' => clean_text(
+            $_POST['client_name'] ?? '',
+            100
+        ),
+
+        'short_desc' => clean_text(
+            $_POST['short_desc'] ?? '',
+            1000
+        ),
+
+        'case_study_text' => clean_text(
+            $_POST['case_study_text'] ?? '',
+            10000
+        ),
+
+        'thumbnail' => trim(
+            (string) (
+                $_POST['thumbnail'] ??
+                ''
+            )
+        ),
+
+        'project_url' => trim(
+            (string) (
+                $_POST['project_url'] ??
+                ''
+            )
+        ),
+
+        'github_url' => trim(
+            (string) (
+                $_POST['github_url'] ??
+                ''
+            )
+        ),
+
+        'is_featured' =>
+            isset($_POST['is_featured']),
+
+        'is_active' =>
+            isset($_POST['is_active']),
+
+        'sort_order' => max(
+            0,
+            min(
+                9999,
+                (int) (
+                    $_POST['sort_order'] ??
+                    0
+                )
+            )
+        ),
+    ];
+
+    $technologies = normalize_list(
+        $_POST['technologies'] ?? '',
+        30
+    );
+
+    $details = project_details_from_post();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate basic information
+    |--------------------------------------------------------------------------
+    */
+
+    if (mb_strlen($form['title']) < 3) {
+        $errors[] =
+            'Project title must contain at least 3 characters.';
+    }
+
+    if (mb_strlen($form['category']) < 2) {
+        $errors[] =
+            'Enter a valid project category.';
+    }
+
+    if (mb_strlen($form['short_desc']) < 10) {
+        $errors[] =
+            'Short description must contain at least 10 characters.';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate optional URLs
+    |--------------------------------------------------------------------------
+    */
+
+    $thumbnail = project_media_reference(
+        $form['thumbnail']
+    );
+
+    if (
+        $form['thumbnail'] !== '' &&
+        $thumbnail === ''
+    ) {
+        $errors[] =
+            'Thumbnail must be a valid HTTP/HTTPS URL or uploads/ path.';
+    }
+
+    $projectUrl = valid_http_url(
+        $form['project_url']
+    );
+
+    if (
+        $form['project_url'] !== '' &&
+        $projectUrl === ''
+    ) {
+        $errors[] =
+            'Live project URL is invalid.';
+    }
+
+    $githubUrl = valid_http_url(
+        $form['github_url']
+    );
+
+    if (
+        $form['github_url'] !== '' &&
+        $githubUrl === ''
+    ) {
+        $errors[] =
+            'GitHub URL is invalid.';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create project
+    |--------------------------------------------------------------------------
+    */
+
+    if ($errors === []) {
+        try {
+            $media = [];
+
+            if (isset($_FILES['media_files'])) {
+                $media =
+                    project_collect_uploaded_media(
+                        $_FILES['media_files']
+                    );
+            }
+
+            $externalMedia =
+                project_collect_external_media(
+                    $_POST['media_urls_text'] ??
+                    ''
+                );
+
+            $media = array_merge(
+                $media,
+                $externalMedia
+            );
+
+            $media = array_values(
+                array_slice(
+                    $media,
+                    0,
+                    30
+                )
+            );
+
+            if ($thumbnail === '') {
+                $thumbnail =
+                    project_find_thumbnail(
+                        $media
+                    );
+            }
+
+            $videoPreview =
+                project_find_video_preview(
+                    $media
+                );
+
+            $galleryJson = json_encode(
+                $media,
+                JSON_UNESCAPED_SLASHES |
+                JSON_UNESCAPED_UNICODE |
+                JSON_THROW_ON_ERROR
+            );
+
+            $technologyJson = json_encode(
+                array_values($technologies),
+                JSON_UNESCAPED_SLASHES |
+                JSON_UNESCAPED_UNICODE |
+                JSON_THROW_ON_ERROR
+            );
+
+            $detailsJson = json_encode(
+                $details,
+                JSON_UNESCAPED_SLASHES |
+                JSON_UNESCAPED_UNICODE |
+                JSON_THROW_ON_ERROR
+            );
+
+            $statement = $pdo->prepare(
+                'INSERT INTO projects (
+                    title,
+                    category,
+                    short_desc,
+                    thumbnail,
+                    video_preview,
+                    gallery,
+                    client_name,
+                    case_study_text,
+                    technologies,
+                    details,
+                    project_url,
+                    github_url,
+                    is_featured,
+                    is_active,
+                    sort_order
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?
+                )'
+            );
+
+            $statement->execute([
+                $form['title'],
+                $form['category'],
+                $form['short_desc'],
+
+                $thumbnail !== ''
+                    ? $thumbnail
+                    : null,
+
+                $videoPreview !== ''
+                    ? $videoPreview
+                    : null,
+
+                $galleryJson,
+
+                $form['client_name'] !== ''
+                    ? $form['client_name']
+                    : null,
+
+                $form['case_study_text'] !== ''
+                    ? $form['case_study_text']
+                    : null,
+
+                $technologyJson,
+                $detailsJson,
+
+                $projectUrl !== ''
+                    ? $projectUrl
+                    : null,
+
+                $githubUrl !== ''
+                    ? $githubUrl
+                    : null,
+
+                $form['is_featured'] ? 1 : 0,
+                $form['is_active'] ? 1 : 0,
+                $form['sort_order'],
+            ]);
+
+            flash(
+                'success',
+                'Advanced portfolio project published successfully.'
+            );
+
+            redirect('projects.php');
+        } catch (Throwable $exception) {
+            error_log(
+                'Project creation failed: ' .
+                $exception->getMessage()
+            );
+
+            $errors[] =
+                $exception instanceof RuntimeException
+                    ? $exception->getMessage()
+                    : 'The project could not be created. Please try again.';
+        }
+    }
+}
+
+require 'project_form.php';
