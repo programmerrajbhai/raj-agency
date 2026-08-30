@@ -42,7 +42,7 @@ if (!$product) {
         </p>
 
         <a
-            href="index.php?page=portfolio"
+            href="index.php?page=products"
             class="inline-block mt-7 px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl"
         >
             Back to Portfolio
@@ -183,7 +183,7 @@ $relatedServices = $relatedStatement->fetchAll();
                 <span class="mx-2">/</span>
 
                 <a
-                    href="index.php?page=portfolio"
+                    href="index.php?page=products"
                     class="hover:text-white"
                 >
                     Portfolio
@@ -630,7 +630,7 @@ $relatedServices = $relatedStatement->fetchAll();
                 </h2>
 
                 <a
-                    href="index.php?page=portfolio"
+                    href="index.php?page=products"
                     class="text-yellow-500 hover:underline"
                 >
                     View all

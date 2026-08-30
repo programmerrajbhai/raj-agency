@@ -43,7 +43,7 @@ $serviceId = filter_input(
 if (!$serviceId || $serviceId < 1) {
     flash('error', 'Invalid service.');
 
-    redirect('../index.php?page=portfolio');
+    redirect('../index.php?page=products');
 }
 
 $cart = cart_quantities();
@@ -71,7 +71,7 @@ if ($action === 'add') {
             'This service is not available.'
         );
 
-        redirect('../index.php?page=portfolio');
+        redirect('../index.php?page=products');
     }
 
     $currentQuantity = (int) (

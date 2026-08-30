@@ -11,7 +11,7 @@ unset(
 
 if (!is_array($order)) {
     redirect(
-        'index.php?page=portfolio'
+        'index.php?page=products'
     );
 }
 ?>
@@ -98,7 +98,7 @@ if (!is_array($order)) {
         </p>
 
         <a
-            href="index.php?page=portfolio"
+            href="index.php?page=products"
             class="inline-block px-7 py-3.5 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400"
         >
             Continue Browsing

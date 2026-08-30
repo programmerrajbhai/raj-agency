@@ -14,7 +14,7 @@ if ($cartItems === []) {
     );
 
     redirect(
-        'index.php?page=portfolio'
+        'index.php?page=products'
     );
 }
 

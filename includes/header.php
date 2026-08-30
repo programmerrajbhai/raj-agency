@@ -5,13 +5,25 @@ require_once __DIR__ . '/cart.php';
 
 $pageTitles = [
     'home' => 'Raj Agency | App, Website & Automation Developer',
-    'feed' => 'Latest Projects | Raj Agency',
-    'portfolio' => 'Portfolio & Digital Products | Raj Agency',
+
+    'feed' => 'Latest Products | Raj Agency',
+
+    'portfolio' => 'Portfolio Projects | Raj Agency',
+
+    'project-details' => 'Project Details | Raj Agency',
+
+    'products' => 'Digital Products & Services | Raj Agency',
+
+    'service-details' => 'Product Details | Raj Agency',
+
     'checkout' => 'Complete Your Order | Raj Agency',
-    'contact' => 'Contact Raj Agency | Start Your Project',
-    'about' => 'About Habib Islam Raj | Raj Agency',
-    'service-details' => 'Service Details | Raj Agency',
+
     'order-success' => 'Order Received | Raj Agency',
+
+    'contact' => 'Contact Raj Agency | Start Your Project',
+
+    'about' => 'About Habib Islam Raj | Raj Agency',
+
     '404' => 'Page Not Found | Raj Agency',
 ];
 
@@ -33,13 +45,17 @@ function nav_active(string $target, string $current): string
 ?>
 
 <!DOCTYPE html>
+
+
 <html lang="en" class="scroll-smooth">
+<head>
+
+    <link
+        rel="stylesheet"
+        href="assets/css/portfolio-premium.css"
+    >
 
 
-<link
-    rel="stylesheet"
-    href="assets/css/portfolio-premium.css"
->
 <head>
     <meta charset="UTF-8">
 

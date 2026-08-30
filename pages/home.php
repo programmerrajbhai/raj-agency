@@ -49,7 +49,7 @@ $latestServices = $statement->fetchAll();
                 </div>
 
                 <a
-                    href="index.php?page=portfolio"
+                    href="index.php?page=products"
                     class="inline-flex items-center gap-2 text-yellow-500 font-bold hover:text-yellow-400"
                 >
                     View all services

@@ -228,7 +228,7 @@ $error = flash('error');
 </head>
 
 <body class="text-white min-h-screen font-sans antialiased">
-    <?php require __DIR__ . '/admin_sidebar.php'; ?>
+
 <?php require __DIR__ . '/admin_sidebar.php'; ?>
     <!-- Mobile Header -->
     <header
