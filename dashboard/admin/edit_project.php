@@ -15,7 +15,6 @@ $projectId = filter_input(
 
 if (!$projectId || $projectId < 1) {
     flash('error', 'Invalid project ID.');
-
     redirect('projects.php');
 }
 
@@ -32,7 +31,6 @@ $project = $statement->fetch();
 
 if (!$project) {
     flash('error', 'Project was not found.');
-
     redirect('projects.php');
 }
 
@@ -66,56 +64,46 @@ $form = [
     'title' => (string) $project['title'],
 
     'category' => (string) (
-        $project['category'] ??
-        ''
+        $project['category'] ?? ''
     ),
 
     'client_name' => (string) (
-        $project['client_name'] ??
-        ''
+        $project['client_name'] ?? ''
     ),
 
     'short_desc' => (string) (
-        $project['short_desc'] ??
-        ''
+        $project['short_desc'] ?? ''
     ),
 
     'case_study_text' => (string) (
-        $project['case_study_text'] ??
-        ''
+        $project['case_study_text'] ?? ''
     ),
 
     'thumbnail' => (string) (
-        $project['thumbnail'] ??
-        ''
+        $project['thumbnail'] ?? ''
     ),
 
     'project_url' => (string) (
-        $project['project_url'] ??
-        ''
+        $project['project_url'] ?? ''
     ),
 
     'github_url' => (string) (
-        $project['github_url'] ??
-        ''
+        $project['github_url'] ?? ''
     ),
 
     'is_featured' =>
         (int) (
-            $project['is_featured'] ??
-            0
+            $project['is_featured'] ?? 0
         ) === 1,
 
     'is_active' =>
         (int) (
-            $project['is_active'] ??
-            1
+            $project['is_active'] ?? 1
         ) === 1,
 
     'sort_order' =>
         (int) (
-            $project['sort_order'] ??
-            0
+            $project['sort_order'] ?? 0
         ),
 ];
 
@@ -150,22 +138,19 @@ if (request_is_post()) {
 
         'thumbnail' => trim(
             (string) (
-                $_POST['thumbnail'] ??
-                ''
+                $_POST['thumbnail'] ?? ''
             )
         ),
 
         'project_url' => trim(
             (string) (
-                $_POST['project_url'] ??
-                ''
+                $_POST['project_url'] ?? ''
             )
         ),
 
         'github_url' => trim(
             (string) (
-                $_POST['github_url'] ??
-                ''
+                $_POST['github_url'] ?? ''
             )
         ),
 
@@ -180,8 +165,7 @@ if (request_is_post()) {
             min(
                 9999,
                 (int) (
-                    $_POST['sort_order'] ??
-                    0
+                    $_POST['sort_order'] ?? 0
                 )
             )
         ),
@@ -253,7 +237,7 @@ if (request_is_post()) {
 
     /*
     |--------------------------------------------------------------------------
-    | Update Project
+    | Update project
     |--------------------------------------------------------------------------
     */
 
@@ -262,17 +246,86 @@ if (request_is_post()) {
             $removeIndexes = array_map(
                 'intval',
                 (array) (
-                    $_POST['remove_media'] ??
-                    []
+                    $_POST['remove_media'] ?? []
                 )
             );
 
-            $finalMedia = [];
+            /*
+            |--------------------------------------------------------------------------
+            | Read safe drag-and-drop order
+            |--------------------------------------------------------------------------
+            */
+
+            $orderedIndexes = [];
 
             foreach (
-                $existingMedia
-                as $index => $item
+                (array) (
+                    $_POST['media_order'] ?? []
+                ) as $orderValue
             ) {
+                $orderValue =
+                    (string) $orderValue;
+
+                if (!ctype_digit($orderValue)) {
+                    continue;
+                }
+
+                $orderedIndex =
+                    (int) $orderValue;
+
+                if (
+                    !array_key_exists(
+                        $orderedIndex,
+                        $existingMedia
+                    ) ||
+                    in_array(
+                        $orderedIndex,
+                        $orderedIndexes,
+                        true
+                    )
+                ) {
+                    continue;
+                }
+
+                $orderedIndexes[] =
+                    $orderedIndex;
+            }
+
+            /*
+             * কোনো media submitted order-এ না থাকলে
+             * সেটি automatic শেষে যুক্ত হবে।
+             */
+            foreach (
+                array_keys($existingMedia)
+                as $existingIndex
+            ) {
+                if (
+                    !in_array(
+                        $existingIndex,
+                        $orderedIndexes,
+                        true
+                    )
+                ) {
+                    $orderedIndexes[] =
+                        $existingIndex;
+                }
+            }
+
+            $finalMedia = [];
+
+            /*
+            |--------------------------------------------------------------------------
+            | Apply order, removal and replacement
+            |--------------------------------------------------------------------------
+            */
+
+            foreach (
+                $orderedIndexes
+                as $index
+            ) {
+                $item =
+                    $existingMedia[$index];
+
                 if (
                     in_array(
                         $index,
@@ -295,8 +348,9 @@ if (request_is_post()) {
                         );
 
                     if (
-                        (int) $replacement['error'] !==
-                        UPLOAD_ERR_NO_FILE
+                        (int) (
+                            $replacement['error']
+                        ) !== UPLOAD_ERR_NO_FILE
                     ) {
                         $item = save_media_upload(
                             $replacement
@@ -306,6 +360,12 @@ if (request_is_post()) {
 
                 $finalMedia[] = $item;
             }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Add newly uploaded media
+            |--------------------------------------------------------------------------
+            */
 
             if (isset($_FILES['media_files'])) {
                 $newUploads =
@@ -319,10 +379,15 @@ if (request_is_post()) {
                 );
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | Add external images, videos and YouTube URLs
+            |--------------------------------------------------------------------------
+            */
+
             $externalMedia =
                 project_collect_external_media(
-                    $_POST['media_urls_text'] ??
-                    ''
+                    $_POST['media_urls_text'] ?? ''
                 );
 
             $finalMedia = array_merge(
@@ -330,6 +395,9 @@ if (request_is_post()) {
                 $externalMedia
             );
 
+            /*
+             * Maximum 30 media items.
+             */
             $finalMedia = array_values(
                 array_slice(
                     $finalMedia,
@@ -338,17 +406,32 @@ if (request_is_post()) {
                 )
             );
 
-            if ($thumbnail === '') {
+            /*
+            |--------------------------------------------------------------------------
+            | Synchronize cover with gallery order
+            |--------------------------------------------------------------------------
+            */
+
+            $orderedThumbnail =
+                project_find_thumbnail(
+                    $finalMedia
+                );
+
+            if ($orderedThumbnail !== '') {
                 $thumbnail =
-                    project_find_thumbnail(
-                        $finalMedia
-                    );
+                    $orderedThumbnail;
             }
 
             $videoPreview =
                 project_find_video_preview(
                     $finalMedia
                 );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Prepare JSON data
+            |--------------------------------------------------------------------------
+            */
 
             $galleryJson = json_encode(
                 $finalMedia,
@@ -370,6 +453,12 @@ if (request_is_post()) {
                 JSON_UNESCAPED_UNICODE |
                 JSON_THROW_ON_ERROR
             );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Update database
+            |--------------------------------------------------------------------------
+            */
 
             $update = $pdo->prepare(
                 'UPDATE projects SET
@@ -433,7 +522,7 @@ if (request_is_post()) {
 
             flash(
                 'success',
-                'Advanced portfolio project updated successfully.'
+                'Portfolio project and gallery order updated successfully.'
             );
 
             redirect('projects.php');

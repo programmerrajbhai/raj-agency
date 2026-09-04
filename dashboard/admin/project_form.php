@@ -1016,8 +1016,7 @@ document.addEventListener(
 );
 </script>
 
+<?php require __DIR__ . '/project_media_sorter.php'; ?>
+
 </body>
-
-
-
 </html>

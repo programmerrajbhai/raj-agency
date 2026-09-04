@@ -461,7 +461,7 @@ function portfolio_page_url(
 
                 <?php if ($firstMedia !== null): ?>
 
-                    <div class="aspect-video bg-black overflow-hidden">
+                    <div class="portfolio-adaptive-media bg-black overflow-hidden">
 
                         <?php if (
                             $firstMedia['type'] ===
@@ -477,14 +477,14 @@ function portfolio_page_url(
 
                             <a
                                 href="index.php?page=project-details&id=<?= (int) $project['id'] ?>"
-                                class="relative block w-full h-full"
+                                class="portfolio-media-frame relative block w-full h-full"
                             >
 
                                 <img
                                     src="https://img.youtube.com/vi/<?= e($youtubeId) ?>/hqdefault.jpg"
                                     alt="<?= e($project['title']) ?>"
                                     loading="lazy"
-                                    class="w-full h-full object-cover"
+                                    class="portfolio-media-element w-full h-full object-contain"
                                 >
 
                                 <span class="absolute inset-0 flex items-center justify-center bg-black/20">
@@ -505,21 +505,21 @@ function portfolio_page_url(
                                 controls
                                 playsinline
                                 preload="metadata"
-                                class="w-full h-full object-cover"
+                                class="portfolio-media-element w-full h-full object-contain"
                             ></video>
 
                         <?php else: ?>
 
                             <a
                                 href="index.php?page=project-details&id=<?= (int) $project['id'] ?>"
-                                class="block w-full h-full"
+                                class="portfolio-media-frame block w-full h-full"
                             >
 
                                 <img
                                     src="<?= e($firstMedia['url']) ?>"
                                     alt="<?= e($project['title']) ?>"
                                     loading="lazy"
-                                    class="w-full h-full object-cover hover:scale-105 transition duration-500"
+                                    class="portfolio-media-element w-full h-full object-contain"
                                 >
 
                             </a>
@@ -693,10 +693,247 @@ function portfolio_page_url(
 
 </main>
 
+<style>
+.portfolio-adaptive-media {
+    --media-background: none;
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    border-top: 1px solid rgba(255, 255, 255, .07);
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+    background: #050505;
+}
+
+.portfolio-adaptive-media::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    inset: -30px;
+    background-image:
+        linear-gradient(
+            120deg,
+            rgba(0, 0, 0, .78),
+            rgba(0, 0, 0, .52)
+        ),
+        var(--media-background);
+    background-position: center;
+    background-size: cover;
+    filter: blur(26px) saturate(.9);
+    transform: scale(1.12);
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+
+.portfolio-adaptive-media.is-portrait::before {
+    opacity: .82;
+}
+
+.portfolio-adaptive-media .portfolio-media-frame,
+.portfolio-adaptive-media > .portfolio-media-element {
+    position: relative;
+    z-index: 2;
+}
+
+.portfolio-adaptive-media.is-landscape {
+    height: auto;
+    aspect-ratio: 16 / 9;
+    padding: 0;
+}
+
+.portfolio-adaptive-media.is-landscape .portfolio-media-frame {
+    width: 100%;
+    height: 100%;
+}
+
+.portfolio-adaptive-media.is-landscape .portfolio-media-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover !important;
+}
+
+.portfolio-adaptive-media.is-portrait {
+    height: 650px;
+    padding: 26px;
+}
+
+.portfolio-adaptive-media.is-portrait::after {
+    content: "Mobile App Preview";
+    position: absolute;
+    z-index: 4;
+    left: 18px;
+    bottom: 16px;
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .68);
+    color: rgba(255, 255, 255, .86);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    backdrop-filter: blur(14px);
+}
+
+.portfolio-adaptive-media.is-portrait .portfolio-media-frame {
+    width: auto;
+    max-width: 62%;
+    height: 100%;
+    aspect-ratio: 9 / 16;
+    overflow: hidden;
+    border: 8px solid #17171a;
+    border-radius: 32px;
+    background: #050505;
+    box-shadow:
+        0 32px 70px rgba(0, 0, 0, .7),
+        0 0 0 1px rgba(255, 255, 255, .17),
+        inset 0 0 0 1px rgba(255, 255, 255, .06);
+}
+
+.portfolio-adaptive-media.is-portrait > video.portfolio-media-element {
+    width: auto;
+    max-width: 62%;
+    height: 100%;
+    aspect-ratio: 9 / 16;
+    border: 8px solid #17171a;
+    border-radius: 32px;
+    background: #050505;
+    box-shadow:
+        0 32px 70px rgba(0, 0, 0, .7),
+        0 0 0 1px rgba(255, 255, 255, .17);
+}
+
+.portfolio-adaptive-media.is-portrait .portfolio-media-element {
+    width: 100%;
+    height: 100%;
+    object-fit: contain !important;
+    object-position: center;
+    border-radius: 23px;
+    transform: none !important;
+}
+
+@media (max-width: 767px) {
+    .portfolio-adaptive-media {
+        height: 360px;
+    }
+
+    .portfolio-adaptive-media.is-portrait {
+        height: 590px;
+        padding: 20px;
+    }
+
+    .portfolio-adaptive-media.is-portrait .portfolio-media-frame,
+    .portfolio-adaptive-media.is-portrait > video.portfolio-media-element {
+        max-width: 82%;
+        border-width: 6px;
+        border-radius: 27px;
+    }
+
+    .portfolio-adaptive-media.is-portrait .portfolio-media-element {
+        border-radius: 20px;
+    }
+
+    .portfolio-adaptive-media.is-portrait::after {
+        left: 12px;
+        bottom: 11px;
+        font-size: 9px;
+    }
+}
+</style>
+
 <script>
 document.addEventListener(
     'DOMContentLoaded',
     function () {
+        const projectMedia =
+            document.querySelectorAll(
+                '.portfolio-media-element'
+            );
+
+        function applyMediaLayout(media) {
+            const box = media.closest(
+                '.portfolio-adaptive-media'
+            );
+
+            if (!box) {
+                return;
+            }
+
+            const isVideo =
+                media.tagName === 'VIDEO';
+
+            const width = isVideo
+                ? media.videoWidth
+                : media.naturalWidth;
+
+            const height = isVideo
+                ? media.videoHeight
+                : media.naturalHeight;
+
+            if (!width || !height) {
+                return;
+            }
+
+            const isPortrait =
+                height > width * 1.15;
+
+            box.classList.toggle(
+                'is-portrait',
+                isPortrait
+            );
+
+            box.classList.toggle(
+                'is-landscape',
+                !isPortrait
+            );
+
+            if (isPortrait) {
+                const source =
+                    media.currentSrc ||
+                    media.src ||
+                    '';
+
+                box.style.setProperty(
+                    '--media-background',
+                    'url("' +
+                        source.replace(
+                            /"/g,
+                            '\\"'
+                        ) +
+                    '")'
+                );
+            }
+        }
+
+        projectMedia.forEach(function (media) {
+            const isVideo =
+                media.tagName === 'VIDEO';
+
+            const ready = isVideo
+                ? media.readyState >= 1
+                : media.complete &&
+                    media.naturalWidth > 0;
+
+            if (ready) {
+                applyMediaLayout(media);
+                return;
+            }
+
+            media.addEventListener(
+                isVideo
+                    ? 'loadedmetadata'
+                    : 'load',
+                function () {
+                    applyMediaLayout(media);
+                },
+                { once: true }
+            );
+        });
+
         const likeForms =
             document.querySelectorAll(
                 '.project-like-form'
